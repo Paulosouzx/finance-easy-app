@@ -1,0 +1,1407 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Personal Finance Management API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: accounts
+    description: Bank accounts and wallets
+  - name: transactions
+    description: Income and expense transactions
+  - name: categories
+    description: Transaction categories and subcategories
+  - name: credit-cards
+    description: Credit cards management
+  - name: bills
+    description: Bills payable and receivable
+  - name: budgets
+    description: Monthly spending budgets
+  - name: goals
+    description: Savings goals
+  - name: dashboard
+    description: Dashboard summary and analytics
+  - name: users
+    description: User preferences
+paths:
+  /users/me:
+    get:
+      operationId: getUsersMe
+      tags: [users]
+      summary: Get current user preferences
+      responses:
+        "200":
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+    patch:
+      operationId: patchUsersMe
+      tags: [users]
+      summary: Update current user preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPreferencesUpdate"
+      responses:
+        "200":
+          description: Updated user preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # DASHBOARD
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary (total balance, monthly income/expenses, open card invoices)
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/monthly-evolution:
+    get:
+      operationId: getMonthlyEvolution
+      tags: [dashboard]
+      summary: Get monthly income vs expenses for the last 6 months
+      responses:
+        "200":
+          description: Monthly evolution data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyEvolution"
+
+  /dashboard/expenses-by-category:
+    get:
+      operationId: getExpensesByCategory
+      tags: [dashboard]
+      summary: Get current month expenses grouped by category
+      responses:
+        "200":
+          description: Expenses by category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryExpense"
+
+  /dashboard/recent-transactions:
+    get:
+      operationId: getRecentTransactions
+      tags: [dashboard]
+      summary: Get last 10 transactions
+      responses:
+        "200":
+          description: Recent transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+
+  # ACCOUNTS
+  /accounts:
+    get:
+      operationId: getAccounts
+      tags: [accounts]
+      summary: List all accounts
+      responses:
+        "200":
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+    post:
+      operationId: createAccount
+      tags: [accounts]
+      summary: Create a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "201":
+          description: Created account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+
+  /accounts/{id}:
+    get:
+      operationId: getAccount
+      tags: [accounts]
+      summary: Get account by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateAccount
+      tags: [accounts]
+      summary: Update account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountUpdate"
+      responses:
+        "200":
+          description: Updated account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+    delete:
+      operationId: deleteAccount
+      tags: [accounts]
+      summary: Delete account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # TRANSACTIONS
+  /transactions:
+    get:
+      operationId: getTransactions
+      tags: [transactions]
+      summary: List transactions with optional filters
+      parameters:
+        - name: accountId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [paid, pending]
+        - name: month
+          in: query
+          schema:
+            type: string
+            description: "YYYY-MM format"
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Create a new transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionInput"
+      responses:
+        "201":
+          description: Created transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get transaction by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Update transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionUpdate"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    delete:
+      operationId: deleteTransaction
+      tags: [transactions]
+      summary: Delete transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /transactions/{id}/status:
+    patch:
+      operationId: updateTransactionStatus
+      tags: [transactions]
+      summary: Toggle transaction paid/pending status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionStatusUpdate"
+      responses:
+        "200":
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  # CATEGORIES
+  /categories:
+    get:
+      operationId: getCategories
+      tags: [categories]
+      summary: List all categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a new category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdate"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # CREDIT CARDS
+  /credit-cards:
+    get:
+      operationId: getCreditCards
+      tags: [credit-cards]
+      summary: List all credit cards
+      responses:
+        "200":
+          description: List of credit cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CreditCard"
+    post:
+      operationId: createCreditCard
+      tags: [credit-cards]
+      summary: Create a new credit card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditCardInput"
+      responses:
+        "201":
+          description: Created credit card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditCard"
+
+  /credit-cards/{id}:
+    patch:
+      operationId: updateCreditCard
+      tags: [credit-cards]
+      summary: Update credit card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreditCardUpdate"
+      responses:
+        "200":
+          description: Updated credit card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditCard"
+    delete:
+      operationId: deleteCreditCard
+      tags: [credit-cards]
+      summary: Delete credit card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /credit-cards/{id}/invoice:
+    get:
+      operationId: getCreditCardInvoice
+      tags: [credit-cards]
+      summary: Get current month invoice for a credit card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Credit card invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditCardInvoice"
+
+  # BILLS
+  /bills:
+    get:
+      operationId: getBills
+      tags: [bills]
+      summary: List bills
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [paid, pending, overdue]
+      responses:
+        "200":
+          description: List of bills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bill"
+    post:
+      operationId: createBill
+      tags: [bills]
+      summary: Create a new bill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillInput"
+      responses:
+        "201":
+          description: Created bill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bill"
+
+  /bills/{id}:
+    patch:
+      operationId: updateBill
+      tags: [bills]
+      summary: Update bill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillUpdate"
+      responses:
+        "200":
+          description: Updated bill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bill"
+    delete:
+      operationId: deleteBill
+      tags: [bills]
+      summary: Delete bill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /bills/{id}/pay:
+    post:
+      operationId: payBill
+      tags: [bills]
+      summary: Mark bill as paid (creates a transaction automatically)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillPayment"
+      responses:
+        "200":
+          description: Paid bill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bill"
+
+  # BUDGETS
+  /budgets:
+    get:
+      operationId: getBudgets
+      tags: [budgets]
+      summary: List budgets for a given month
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+            description: "YYYY-MM format, defaults to current month"
+      responses:
+        "200":
+          description: List of budgets with spending progress
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Budget"
+    post:
+      operationId: createBudget
+      tags: [budgets]
+      summary: Create a budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetInput"
+      responses:
+        "201":
+          description: Created budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+
+  /budgets/{id}:
+    patch:
+      operationId: updateBudget
+      tags: [budgets]
+      summary: Update budget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetUpdate"
+      responses:
+        "200":
+          description: Updated budget
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+    delete:
+      operationId: deleteBudget
+      tags: [budgets]
+      summary: Delete budget
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # GOALS
+  /goals:
+    get:
+      operationId: getGoals
+      tags: [goals]
+      summary: List all savings goals
+      responses:
+        "200":
+          description: List of goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Goal"
+    post:
+      operationId: createGoal
+      tags: [goals]
+      summary: Create a savings goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalInput"
+      responses:
+        "201":
+          description: Created goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+
+  /goals/{id}:
+    patch:
+      operationId: updateGoal
+      tags: [goals]
+      summary: Update goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalUpdate"
+      responses:
+        "200":
+          description: Updated goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+    delete:
+      operationId: deleteGoal
+      tags: [goals]
+      summary: Delete goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /goals/{id}/contribute:
+    post:
+      operationId: contributeToGoal
+      tags: [goals]
+      summary: Add a contribution to a savings goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoalContribution"
+      responses:
+        "200":
+          description: Updated goal with new contribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    # DASHBOARD
+    DashboardSummary:
+      type: object
+      required: [totalBalance, monthlyIncome, monthlyExpenses, openCardInvoices]
+      properties:
+        totalBalance:
+          type: number
+        monthlyIncome:
+          type: number
+        monthlyExpenses:
+          type: number
+        openCardInvoices:
+          type: number
+        totalBalanceChange:
+          type: number
+          description: Percentage change vs last month
+        monthlyIncomeChange:
+          type: number
+        monthlyExpensesChange:
+          type: number
+
+    MonthlyEvolution:
+      type: object
+      required: [month, income, expenses]
+      properties:
+        month:
+          type: string
+          description: "YYYY-MM"
+        label:
+          type: string
+          description: "Jan, Feb, etc."
+        income:
+          type: number
+        expenses:
+          type: number
+
+    CategoryExpense:
+      type: object
+      required: [categoryId, categoryName, categoryColor, amount, percentage]
+      properties:
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryColor:
+          type: string
+        categoryIcon:
+          type: string
+        amount:
+          type: number
+        percentage:
+          type: number
+
+    # ACCOUNTS
+    Account:
+      type: object
+      required: [id, name, type, balance, currency]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [checking, savings, cash, investment]
+        institution:
+          type: ["string", "null"]
+        institutionColor:
+          type: ["string", "null"]
+        balance:
+          type: number
+        currency:
+          type: string
+          default: EUR
+        createdAt:
+          type: string
+          format: date-time
+
+    AccountInput:
+      type: object
+      required: [name, type, balance]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [checking, savings, cash, investment]
+        institution:
+          type: string
+        institutionColor:
+          type: string
+        balance:
+          type: number
+        currency:
+          type: string
+          default: EUR
+
+    AccountUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [checking, savings, cash, investment]
+        institution:
+          type: ["string", "null"]
+        institutionColor:
+          type: ["string", "null"]
+        balance:
+          type: number
+        currency:
+          type: string
+
+    # TRANSACTIONS
+    Transaction:
+      type: object
+      required: [id, amount, type, date, status, accountId]
+      properties:
+        id:
+          type: integer
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [paid, pending]
+        recurrence:
+          type: string
+          enum: [once, weekly, monthly, yearly]
+        accountId:
+          type: integer
+        accountName:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        categoryColor:
+          type: ["string", "null"]
+        categoryIcon:
+          type: ["string", "null"]
+        creditCardId:
+          type: ["integer", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    TransactionInput:
+      type: object
+      required: [amount, type, date, accountId]
+      properties:
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        status:
+          type: string
+          enum: [paid, pending]
+          default: paid
+        recurrence:
+          type: string
+          enum: [once, weekly, monthly, yearly]
+          default: once
+        accountId:
+          type: integer
+        categoryId:
+          type: integer
+        creditCardId:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    TransactionUpdate:
+      type: object
+      properties:
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [income, expense]
+        date:
+          type: string
+          format: date
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [paid, pending]
+        recurrence:
+          type: string
+          enum: [once, weekly, monthly, yearly]
+        accountId:
+          type: integer
+        categoryId:
+          type: ["integer", "null"]
+        creditCardId:
+          type: ["integer", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+
+    TransactionStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [paid, pending]
+
+    # CATEGORIES
+    Category:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        icon:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [income, expense, both]
+        parentId:
+          type: ["integer", "null"]
+        isCustom:
+          type: boolean
+        subcategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+
+    CategoryInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        type:
+          type: string
+          enum: [income, expense, both]
+        parentId:
+          type: integer
+
+    CategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        icon:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [income, expense, both]
+
+    # CREDIT CARDS
+    CreditCard:
+      type: object
+      required: [id, name, limit, closingDay, dueDay, usedAmount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        brand:
+          type: ["string", "null"]
+          description: "visa, mastercard, amex, etc."
+        limit:
+          type: number
+        closingDay:
+          type: integer
+          description: Day of month invoice closes (1-31)
+        dueDay:
+          type: integer
+          description: Day of month invoice is due (1-31)
+        usedAmount:
+          type: number
+          description: Current month used amount
+        availableAmount:
+          type: number
+          description: Limit minus used amount
+        accountId:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    CreditCardInput:
+      type: object
+      required: [name, limit, closingDay, dueDay]
+      properties:
+        name:
+          type: string
+        brand:
+          type: string
+        limit:
+          type: number
+        closingDay:
+          type: integer
+        dueDay:
+          type: integer
+        accountId:
+          type: integer
+        color:
+          type: string
+
+    CreditCardUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        brand:
+          type: ["string", "null"]
+        limit:
+          type: number
+        closingDay:
+          type: integer
+        dueDay:
+          type: integer
+        accountId:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+
+    CreditCardInvoice:
+      type: object
+      required: [cardId, month, total, transactions]
+      properties:
+        cardId:
+          type: integer
+        month:
+          type: string
+        total:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+
+    # BILLS
+    Bill:
+      type: object
+      required: [id, name, amount, dueDate, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [paid, pending, overdue]
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        categoryColor:
+          type: ["string", "null"]
+        recurrence:
+          type: string
+          enum: [once, weekly, monthly, yearly]
+        isOverdue:
+          type: boolean
+        daysUntilDue:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    BillInput:
+      type: object
+      required: [name, amount, dueDate]
+      properties:
+        name:
+          type: string
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        categoryId:
+          type: integer
+        recurrence:
+          type: string
+          enum: [once, weekly, monthly, yearly]
+          default: monthly
+
+    BillUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        amount:
+          type: number
+        dueDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [paid, pending, overdue]
+        categoryId:
+          type: ["integer", "null"]
+        recurrence:
+          type: string
+          enum: [once, weekly, monthly, yearly]
+
+    BillPayment:
+      type: object
+      required: [accountId]
+      properties:
+        accountId:
+          type: integer
+        paidDate:
+          type: string
+          format: date
+
+    # BUDGETS
+    Budget:
+      type: object
+      required: [id, categoryId, month, limitAmount, spentAmount]
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+        categoryName:
+          type: ["string", "null"]
+        categoryColor:
+          type: ["string", "null"]
+        categoryIcon:
+          type: ["string", "null"]
+        month:
+          type: string
+          description: "YYYY-MM"
+        limitAmount:
+          type: number
+        spentAmount:
+          type: number
+        percentage:
+          type: number
+          description: "spentAmount / limitAmount * 100"
+        status:
+          type: string
+          enum: [ok, warning, exceeded]
+          description: "ok < 75%, warning 75-100%, exceeded > 100%"
+
+    BudgetInput:
+      type: object
+      required: [categoryId, month, limitAmount]
+      properties:
+        categoryId:
+          type: integer
+        month:
+          type: string
+        limitAmount:
+          type: number
+
+    BudgetUpdate:
+      type: object
+      properties:
+        limitAmount:
+          type: number
+
+    # GOALS
+    Goal:
+      type: object
+      required: [id, name, targetAmount, currentAmount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        targetAmount:
+          type: number
+        currentAmount:
+          type: number
+        deadline:
+          type: ["string", "null"]
+          format: date
+        percentage:
+          type: number
+          description: "currentAmount / targetAmount * 100"
+        monthlyRequired:
+          type: ["number", "null"]
+          description: Amount needed per month to reach goal by deadline
+        color:
+          type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    GoalInput:
+      type: object
+      required: [name, targetAmount]
+      properties:
+        name:
+          type: string
+        targetAmount:
+          type: number
+        currentAmount:
+          type: number
+          default: 0
+        deadline:
+          type: string
+          format: date
+        color:
+          type: string
+        icon:
+          type: string
+
+    GoalUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        targetAmount:
+          type: number
+        deadline:
+          type: ["string", "null"]
+          format: date
+        color:
+          type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
+
+    GoalContribution:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+
+    # USER PREFERENCES
+    UserPreferences:
+      type: object
+      required: [id, theme, enabledModules]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        theme:
+          type: string
+          enum: [light, dark, green-light, green-dark]
+        enabledModules:
+          type: array
+          items:
+            type: string
+
+    UserPreferencesUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        theme:
+          type: string
+          enum: [light, dark, green-light, green-dark]
+        enabledModules:
+          type: array
+          items:
+            type: string
