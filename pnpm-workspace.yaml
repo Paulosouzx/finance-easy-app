@@ -2,7 +2,6 @@ minimumReleaseAge: 1440
 
 packages:
   - finance-app
-  - lib/*
   - scripts
 
 catalog:
@@ -14,7 +13,6 @@ catalog:
   '@vitejs/plugin-react': ^5.0.4
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
-  drizzle-orm: ^0.45.2
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
   react: 19.1.0

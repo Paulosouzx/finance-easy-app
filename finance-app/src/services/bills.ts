@@ -55,6 +55,7 @@ export async function payBill(id: string, accountId: string): Promise<void> {
     account_id: accountId,
     created_by: user.id,
     category_id: bill.category_id,
+    card_id: null,
     amount: bill.amount,
     type: "expense",
     description: `Pagamento: ${bill.name}`,

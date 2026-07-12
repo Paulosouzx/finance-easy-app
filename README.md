@@ -1,66 +1,64 @@
 # FinanceApp
 
-Aplicação web fullstack de gestão financeira pessoal inspirada no Mobills — dark mode por defeito, tema roxo (#7B2FF7), sidebar com todas as secções.
+Aplicação web de gestão financeira pessoal inspirada no Mobills — dark mode por defeito, tema roxo (#7B2FF7), sidebar com todas as secções. Autenticação e dados 100% em Supabase (sem backend próprio).
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/finance-app run dev` — run the frontend (path `/`)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string (auto-provisioned)
+- `pnpm --filter @workspace/finance-app run dev` — corre o frontend (`http://localhost:5173`)
+- `pnpm run typecheck` — typecheck de todos os pacotes do workspace
+- `pnpm run build` — typecheck + build
+- Ver `SETUP.md` para criar o projeto Supabase, correr as migrations e configurar o `.env`
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- Frontend: React + Vite + Tailwind CSS + shadcn/ui + Recharts + framer-motion
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js ≥ 18, TypeScript 5.9
+- Frontend: React 19 + Vite + Tailwind CSS + shadcn/ui + Recharts + framer-motion
+- Backend: Supabase (Postgres + Auth + Row Level Security + Realtime) — sem servidor próprio
+- Auth: email/password e Google OAuth via Supabase Auth
 
 ## Where things live
 
-- `lib/api-spec/openapi.yaml` — OpenAPI contract (source of truth for all API shapes)
-- `lib/db/src/schema/` — Drizzle table definitions (accounts, categories, creditCards, transactions, bills, budgets, goals)
-- `/finance-app/src/` — React frontend (pages/ for each section, App.tsx for routing)
-- `lib/api-client-react/src/generated/` — generated React Query hooks (do not edit)
-- `lib/api-zod/src/generated/` — generated Zod validation schemas (do not edit)
+- `/finance-app/src/` — React frontend (`pages/` por secção, `App.tsx` para routing)
+- `/finance-app/src/lib/supabase.ts` — cliente Supabase (lê `.env`)
+- `/finance-app/src/lib/supabase.types.ts` — tipos TypeScript da base de dados
+- `/finance-app/src/services/` — queries diretas ao Supabase (accounts, transactions, credit cards, bills, budgets, goals, categories, profile)
+- `/finance-app/src/contexts/auth.tsx` — sessão, sign in/up, Google OAuth, sign out
+- `/finance-app/supabase/migrations/` — schema SQL + Row Level Security
 
 ## Architecture decisions
 
-- OpenAPI-first: all API shapes live in `openapi.yaml`; hooks and Zod schemas are generated via Orval
-- Numeric DB columns (balance, amount) use `numeric` (stored as string); always `parseFloat()` before returning to clients
-- `date` columns use `mode: "string"` (YYYY-MM-DD) to avoid timezone shifts
-- Dashboard endpoints compute aggregates live from the transactions table; no denormalized summary tables
-- Body schema names are entity-shaped (`AccountInput`, not `CreateAccountBody`) to avoid Orval TS2308 collisions
+- Sem API própria: o frontend fala diretamente com o Supabase (PostgREST) através do `supabase-js`; a autorização vive nas políticas de Row Level Security, não em código de servidor
+- `numeric` (balance, amount) chega como `number` via os tipos gerados; usa sempre `Number(...)` antes de formatar
+- `date` guarda-se em formato `YYYY-MM-DD` (string) para evitar problemas de fuso horário
+- Contas partilhadas: `account_members` liga um 2º utilizador (por email) a uma conta existente; as políticas RLS dão acesso a `accounts`/`credit_cards`/`transactions` ao dono e a membros com `status = 'accepted'`
+- `bills`, `budgets` e `goals` são sempre pessoais (por `user_id`), não são partilháveis via `account_members`
 
 ## Product
 
-- Dashboard: total balance, monthly income/expenses, open card invoices, cash flow chart, expenses-by-category donut, recent transactions
-- Transações: filterable list (type, status, month, category), CRUD, mark paid/pending
-- Contas: bank accounts/wallets with balances, CRUD
-- Cartões de Crédito: credit card management, current invoice view, limit usage bar
-- Contas a Pagar: bills list with overdue detection, pay bill → auto creates transaction
-- Orçamentos: monthly budgets per category with green/yellow/red progress
-- Metas: savings goals with progress bars and contribution tracking
-- Categorias: income/expense categories with icons/colors, custom categories
-- Relatórios: evolution charts and category breakdown
-- Definições: theme toggle, user profile section
+- Dashboard: saldo total, receitas/despesas do mês, faturas de cartão em aberto, gráfico de cash flow, despesas por categoria, transações recentes
+- Transações: lista filtrável (tipo, estado, mês, categoria), CRUD, marcar paga/pendente
+- Contas: contas bancárias/carteiras/dívidas com saldo, CRUD, partilha com um 2º utilizador (convite por email)
+- Cartões de Crédito: gestão de cartões, fatura atual, barra de utilização do limite
+- Contas a Pagar: lista com deteção de atraso, pagar conta → cria transação automaticamente
+- Orçamentos: orçamentos mensais por categoria com progresso verde/amarelo/vermelho
+- Metas: metas de poupança com barra de progresso e contribuições
+- Categorias: categorias de receita/despesa com ícones/cores, categorias personalizadas
+- Relatórios: evolução mensal e distribuição por categoria
+- Definições: perfil, tema, módulos ativos, terminar sessão
+
+## Partilha de contas (2º utilizador)
+
+1. Na página **Contas**, clica em **Partilhar** numa conta (pensado sobretudo para contas do tipo "Dívida")
+2. Introduz o email da pessoa a convidar — cria uma linha `pending` em `account_members`
+3. Quando essa pessoa entra na app com o mesmo email, vê o convite no sino de notificações e pode aceitar/recusar
+4. Ao aceitar, `account_members.user_id` passa a apontar para o novo utilizador e as políticas RLS passam a dar-lhe acesso de leitura/escrita à conta, cartões e transações associadas
 
 ## Gotchas
 
-- After any `openapi.yaml` change, run codegen before touching frontend or backend types
-- Do NOT use `CreateNoteBody`-style component names in the OpenAPI spec — Orval generates these names itself and re-exporting causes TS2308
-- `getCreditCardInvoice` has no `month` query param (would cause a `GetCreditCardInvoiceParams` name collision); month defaults to current month server-side
-- Numeric Drizzle columns return strings from the DB — always `parseFloat()` before sending JSON responses
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Row Level Security está sempre ativo (ver `002_debt_accounts_and_rls.sql`) — qualquer query nova a uma tabela existente deve continuar a respeitar as políticas, não confiar em filtros feitos só no cliente
+- `getAccounts`/`getTransactions`/`getCreditCards` não filtram por `owner_id` no cliente — a RLS é que decide o que é visível (dono ou membro aceite)
+- Depois de mudar `supabase.types.ts`, mantém sempre `Relationships`/`Views`/`Functions`/`Enums` no formato do Supabase (`supabase gen types typescript`), senão o `createClient<Database>` deixa de inferir os tipos de insert/update
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Ver `SETUP.md` para o guia completo de setup do Supabase (schema, RLS, Google OAuth, Realtime, deploy)

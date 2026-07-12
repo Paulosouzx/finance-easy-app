@@ -33,14 +33,12 @@ pnpm install
 ## 3. Correr o schema SQL
 
 1. No painel Supabase → **SQL Editor** → **New query**
-2. Copia o conteúdo de `supabase/migrations/001_initial_schema.sql`
-3. Clica **Run**
+2. Copia e corre o conteúdo de `supabase/migrations/001_initial_schema.sql`
+3. Numa nova query, copia e corre o conteúdo de `supabase/migrations/002_debt_accounts_and_rls.sql`
 
-O schema cria todas as tabelas (profiles, accounts, categories, transactions, credit_cards, bills, budgets, goals) e insere as categorias do sistema.
+O `001` cria todas as tabelas (profiles, accounts, categories, account_members, transactions, credit_cards, bills, budgets, goals) e insere as categorias do sistema.
 
-### Ativar Row Level Security (RLS)
-
-No mesmo ficheiro SQL, **descomenta** o bloco `-- ROW LEVEL SECURITY` no final e corre separadamente. Isto garante que cada utilizador só acede aos seus próprios dados.
+O `002` adiciona o tipo de conta **"debt"** (dívida partilhável), **ativa Row Level Security em todas as tabelas** e cria as políticas de acesso — incluindo a partilha de uma conta com um 2º utilizador via `account_members`. Corre sempre os dois ficheiros, por esta ordem: sem o `002`, qualquer utilizador autenticado consegue ler/escrever os dados de todos os outros utilizadores.
 
 ---
 
@@ -144,7 +142,8 @@ Adiciona as variáveis de ambiente na UI do Netlify.
 │       └── pwa-install-prompt.tsx      # Botão de instalação PWA
 ├── supabase/
 │   └── migrations/
-│       └── 001_initial_schema.sql  # Schema + RLS comentado
+│       ├── 001_initial_schema.sql          # Schema base
+│       └── 002_debt_accounts_and_rls.sql   # Conta "debt" + RLS + partilha de contas
 ├── public/
 │   ├── manifest.json           # PWA manifest
 │   └── sw.js                   # Service worker (cache assets)
@@ -153,14 +152,13 @@ Adiciona as variáveis de ambiente na UI do Netlify.
 
 ---
 
-## Checklist de migração para Supabase
+## Checklist de setup
 
 - [ ] Projeto Supabase criado
 - [ ] `001_initial_schema.sql` corrido
-- [ ] RLS ativado e políticas descomentadas
+- [ ] `002_debt_accounts_and_rls.sql` corrido (RLS + tipo de conta "debt" + partilha de contas)
 - [ ] `.env` preenchido com URL e Anon Key
 - [ ] Autenticação Email/Password ativa
-- [ ] Google OAuth configurado (opcional)
+- [ ] Google OAuth configurado (login com Google no ecrã de entrada)
 - [ ] Realtime ativado nas tabelas (opcional)
 - [ ] Ícones PWA adicionados em `public/icons/`
-- [ ] Hooks/serviços atualizados para chamar Supabase em vez da API Express

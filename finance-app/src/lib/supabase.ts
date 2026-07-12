@@ -8,16 +8,6 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "[FinanceApp] Supabase não está configurado.\n" +
-    "Cria um ficheiro .env na raiz do projeto com:\n" +
-    "  VITE_SUPABASE_URL=https://<projeto>.supabase.co\n" +
-    "  VITE_SUPABASE_ANON_KEY=<anon-key>\n" +
-    "Consulta SETUP.md para instruções completas."
-  );
-}
-
 export const supabase = createClient<Database>(
   supabaseUrl ?? "https://placeholder.supabase.co",
   supabaseAnonKey ?? "placeholder-key",

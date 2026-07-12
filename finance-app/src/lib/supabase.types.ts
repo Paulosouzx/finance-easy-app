@@ -16,6 +16,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["profiles"]["Row"], "created_at"> & { created_at?: string };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
       };
       accounts: {
         Row: {
@@ -31,6 +32,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["accounts"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["accounts"]["Insert"]>;
+        Relationships: [];
       };
       account_members: {
         Row: {
@@ -44,6 +46,15 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["account_members"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["account_members"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "account_members_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       categories: {
         Row: {
@@ -59,6 +70,15 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["categories"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["categories"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       transactions: {
         Row: {
@@ -78,6 +98,29 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["transactions"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["transactions"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "credit_cards";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       credit_cards: {
         Row: {
@@ -92,6 +135,15 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["credit_cards"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["credit_cards"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "credit_cards_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       bills: {
         Row: {
@@ -108,6 +160,22 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["bills"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["bills"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "bills_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bills_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       budgets: {
         Row: {
@@ -120,6 +188,15 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["budgets"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["budgets"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       goals: {
         Row: {
@@ -129,11 +206,18 @@ export interface Database {
           target_amount: number;
           current_amount: number;
           deadline: string | null;
+          color: string | null;
+          icon: string | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["goals"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["goals"]["Insert"]>;
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

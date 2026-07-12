@@ -1,9 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { useGetUsersMe, usePatchUsersMe } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { getGetUsersMeQueryKey } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProfile, updateProfile, type AppTheme } from "@/services/profile";
 
-export type AppTheme = "light" | "dark" | "green-light" | "green-dark";
+export type { AppTheme };
 
 const DEFAULT_MODULES = [
   "dashboard", "transactions", "accounts",
@@ -34,8 +33,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const [theme, setThemeLocal] = useState<AppTheme>(() => {
-    const stored = localStorage.getItem("finance-theme") as AppTheme | null;
-    return stored ?? "dark";
+    return (localStorage.getItem("finance-theme") as AppTheme) ?? "dark";
   });
 
   const [enabledModules, setModulesLocal] = useState<string[]>(() => {
@@ -47,31 +45,24 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  useEffect(() => {
-    applyThemeToDOM(theme);
-  }, [theme]);
+  useEffect(() => { applyThemeToDOM(theme); }, [theme]);
 
-  const { data: prefs } = useGetUsersMe();
-  const { mutate: patch } = usePatchUsersMe();
+  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
 
   useEffect(() => {
-    if (!prefs) return;
-    const t = (prefs.theme as AppTheme) ?? "dark";
-    const m = (prefs.enabledModules as string[]) ?? DEFAULT_MODULES;
-    setThemeLocal(t);
-    setModulesLocal(m);
-    localStorage.setItem("finance-theme", t);
-    localStorage.setItem("finance-modules", JSON.stringify(m));
-    applyThemeToDOM(t);
-  }, [prefs]);
+    if (!profile) return;
+    setThemeLocal(profile.theme);
+    setModulesLocal(profile.enabled_modules);
+    localStorage.setItem("finance-theme", profile.theme);
+    localStorage.setItem("finance-modules", JSON.stringify(profile.enabled_modules));
+    applyThemeToDOM(profile.theme);
+  }, [profile]);
 
   const setTheme = (newTheme: AppTheme) => {
     setThemeLocal(newTheme);
     localStorage.setItem("finance-theme", newTheme);
     applyThemeToDOM(newTheme);
-    patch({ data: { theme: newTheme } }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetUsersMeQueryKey() }),
-    });
+    updateProfile({ theme: newTheme }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
   };
 
   const toggleModule = (key: string) => {
@@ -80,12 +71,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       : [...enabledModules, key];
     setModulesLocal(next);
     localStorage.setItem("finance-modules", JSON.stringify(next));
-    patch({ data: { enabledModules: next } }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetUsersMeQueryKey() }),
-    });
+    updateProfile({ enabled_modules: next }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
   };
 
-  const isModuleEnabled = (key: string) => enabledModules?.includes(key) ?? false;
+  const isModuleEnabled = (key: string) => enabledModules.includes(key);
 
   return (
     <UserPreferencesContext.Provider value={{ theme, setTheme, enabledModules, toggleModule, isModuleEnabled }}>

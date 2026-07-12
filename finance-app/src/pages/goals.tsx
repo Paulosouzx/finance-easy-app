@@ -1,13 +1,28 @@
-import { useGetGoals } from "@workspace/api-client-react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getGoals } from "@/services/goals";
 import { Plus, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, differenceInMonths } from "date-fns";
 
 export default function Goals() {
-  const { data: goals, isLoading } = useGetGoals();
+  const { data: goals, isLoading } = useQuery({ queryKey: ["goals"], queryFn: getGoals });
+
+  const enriched = useMemo(() => {
+    if (!goals) return [];
+    return goals.map(g => {
+      const current = Number(g.current_amount ?? 0);
+      const target = Number(g.target_amount ?? 0);
+      const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+      const monthsLeft = g.deadline ? Math.max(differenceInMonths(new Date(g.deadline), new Date()), 1) : null;
+      const remaining = target - current;
+      const monthlyRequired = monthsLeft && remaining > 0 ? remaining / monthsLeft : null;
+      return { ...g, percentage, monthlyRequired };
+    });
+  }, [goals]);
 
   return (
     <div className="space-y-6">
@@ -25,10 +40,10 @@ export default function Goals() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)
-        ) : goals?.length === 0 ? (
+        ) : enriched.length === 0 ? (
           <div className="col-span-full p-8 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">No active savings goals found.</div>
         ) : (
-          goals?.map(goal => (
+          enriched.map(goal => (
             <Card key={goal.id} className="hover:border-primary/50 transition-colors">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-6">
@@ -39,7 +54,7 @@ export default function Goals() {
                     <div>
                       <h4 className="font-semibold">{goal.name}</h4>
                       {goal.deadline && (
-                        <p className="text-xs text-muted-foreground">By {format(new Date(goal.deadline), 'MMM yyyy')}</p>
+                        <p className="text-xs text-muted-foreground">By {format(new Date(goal.deadline), "MMM yyyy")}</p>
                       )}
                     </div>
                   </div>
@@ -47,13 +62,13 @@ export default function Goals() {
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="font-medium">${goal.currentAmount.toFixed(2)}</span>
-                      <span className="text-muted-foreground">of ${goal.targetAmount.toFixed(2)}</span>
+                      <span className="font-medium">${Number(goal.current_amount).toFixed(2)}</span>
+                      <span className="text-muted-foreground">of ${Number(goal.target_amount).toFixed(2)}</span>
                     </div>
-                    <Progress value={goal.percentage || 0} className="h-2" />
+                    <Progress value={goal.percentage} className="h-2" />
                   </div>
                   {goal.monthlyRequired && (
-                    <p className="text-xs text-muted-foreground text-center pt-2 border-t mt-2">
+                    <p className="text-xs text-muted-foreground text-center pt-2 border-t">
                       Need <span className="font-medium text-foreground">${goal.monthlyRequired.toFixed(2)}</span> / mo to reach goal
                     </p>
                   )}

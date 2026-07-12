@@ -1,10 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { useUserPreferences, type AppTheme } from "@/contexts/user-preferences";
+import { useAuth } from "@/contexts/auth";
+import { getProfile } from "@/services/profile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { Check, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ThemeOption = {
@@ -133,6 +137,11 @@ function ThemeSwatch({ option, selected, onSelect }: { option: ThemeOption; sele
 
 export default function Settings() {
   const { theme, setTheme, isModuleEnabled, toggleModule } = useUserPreferences();
+  const { user, signOut } = useAuth();
+  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
+
+  const displayName = profile?.name || user?.email?.split("@")[0] || "Utilizador";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto w-full pb-12">
@@ -148,16 +157,22 @@ export default function Settings() {
           <CardDescription>As tuas informações pessoais.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src="" />
-              <AvatarFallback className="text-lg bg-primary/10 text-primary">U</AvatarFallback>
-            </Avatar>
-            <div className="space-y-1">
-              <h4 className="font-semibold text-lg leading-none">Utilizador</h4>
-              <p className="text-sm text-muted-foreground">utilizador@exemplo.com</p>
-              <Badge variant="secondary" className="mt-1">Plano Gratuito</Badge>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={profile?.avatar_url ?? undefined} />
+                <AvatarFallback className="text-lg bg-primary/10 text-primary">{initial}</AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <h4 className="font-semibold text-lg leading-none">{displayName}</h4>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <Badge variant="secondary" className="mt-1">Plano Gratuito</Badge>
+              </div>
             </div>
+            <Button variant="outline" onClick={() => signOut()}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Terminar sessão
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -11,10 +12,24 @@ import {
   BarChart3,
   Settings,
   Bell,
+  LogOut,
+  Check,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUserPreferences } from "@/contexts/user-preferences";
+import { useAuth } from "@/contexts/auth";
+import { getProfile } from "@/services/profile";
+import { getPendingInvites, respondToInvite } from "@/services/accounts";
 
 type NavItem = {
   href: string;
@@ -39,10 +54,24 @@ const ALL_NAV_ITEMS: NavItem[] = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { isModuleEnabled } = useUserPreferences();
+  const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
+  const { data: invites } = useQuery({ queryKey: ["pending-invites"], queryFn: getPendingInvites });
 
   const visibleItems = ALL_NAV_ITEMS.filter(
     item => item.alwaysOn || isModuleEnabled(item.moduleKey)
   );
+
+  const displayName = profile?.name || user?.email?.split("@")[0] || "Utilizador";
+  const initial = displayName.charAt(0).toUpperCase();
+
+  async function handleRespond(memberId: string, accept: boolean) {
+    await respondToInvite(memberId, accept);
+    queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+  }
 
   const pageTitle = (() => {
     if (location === "/") return "Dashboard";
@@ -106,23 +135,70 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
+                  <Bell className="w-5 h-5" />
+                  {!!invites?.length && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel>Convites de partilha de conta</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {!invites?.length ? (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">Sem convites pendentes.</p>
+                ) : (
+                  invites.map((invite) => (
+                    <div key={invite.id} className="flex items-center justify-between gap-2 px-2 py-2 text-sm">
+                      <span className="truncate">
+                        Convite para <span className="font-medium">{invite.accounts?.name ?? "conta"}</span>
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-500" onClick={() => handleRespond(invite.id, true)}>
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-rose-500" onClick={() => handleRespond(invite.id, false)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div className="h-8 w-px bg-border" />
 
-            <div className="flex items-center gap-3 cursor-pointer">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium leading-none">Utilizador</p>
-                <p className="text-xs text-muted-foreground mt-1">Conta Pessoal</p>
-              </div>
-              <Avatar className="h-9 w-9 ring-2 ring-primary/20">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-primary/10 text-primary font-medium">U</AvatarFallback>
-              </Avatar>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 cursor-pointer">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-medium leading-none">{displayName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{user?.email}</p>
+                  </div>
+                  <Avatar className="h-9 w-9 ring-2 ring-primary/20">
+                    <AvatarImage src={profile?.avatar_url ?? undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">{initial}</AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Definições
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-rose-500 focus:text-rose-500">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
