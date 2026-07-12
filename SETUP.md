@@ -71,7 +71,11 @@ No painel Supabase → **Authentication** → **Providers** → **Email** → at
    - Application type: **Web application**
    - Redirect URI: `https://<projeto>.supabase.co/auth/v1/callback`
 2. No Supabase → **Authentication** → **Providers** → **Google** → ativa e cola **Client ID** e **Client Secret**
-3. Adiciona o teu domínio em **Redirect URLs**: `http://localhost:5173`, `https://teu-dominio.com`
+3. No Supabase → **Authentication** → **URL Configuration**:
+   - **Site URL** → muda de `http://localhost:3000` (default de qualquer projeto novo) para `http://localhost:5173`
+   - **Redirect URLs** → adiciona `http://localhost:5173/**` (e mais tarde o domínio de produção, ex: `https://teu-dominio.com/**`)
+
+> ⚠️ **Gotcha comum:** se o `redirectTo` que a app pede não estiver na lista de Redirect URLs, o Supabase ignora-o silenciosamente e usa o **Site URL** por defeito (`http://localhost:3000`). Isso faz o login com Google parecer "não voltar para a app" — na verdade voltou, mas para uma porta onde não tens nada a correr. Se isto acontecer, confirma sempre estes dois campos primeiro.
 
 ---
 
