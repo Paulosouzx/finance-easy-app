@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Check, LogOut, Languages } from "lucide-react";
+import { Check, LogOut, Languages, Download, CheckCircle2, Share } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 type ThemeOption = {
   key: AppTheme;
@@ -141,6 +142,7 @@ export default function Settings() {
   const { user, signOut } = useAuth();
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
   const t = useTranslation();
+  const { isStandalone, isIos, canInstall, promptInstall } = usePwaInstall();
 
   const displayName = profile?.name || user?.email?.split("@")[0] || "Utilizador";
   const initial = displayName.charAt(0).toUpperCase();
@@ -176,6 +178,37 @@ export default function Settings() {
               {t("settings.profile.signOut")}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Install app */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("settings.install.title")}</CardTitle>
+          <CardDescription>{t("settings.install.subtitle")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isStandalone ? (
+            <div className="flex items-center gap-3 text-emerald-500">
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <div>
+                <p className="font-medium text-sm leading-none">{t("settings.install.installed")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("settings.install.installedDesc")}</p>
+              </div>
+            </div>
+          ) : canInstall ? (
+            <Button onClick={promptInstall} className="w-full sm:w-auto">
+              <Download className="w-4 h-4 mr-2" />
+              {t("settings.install.button")}
+            </Button>
+          ) : isIos ? (
+            <div className="flex items-start gap-3 text-sm text-muted-foreground">
+              <Share className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>{t("settings.install.iosInstructions")}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("settings.install.unsupported")}</p>
+          )}
         </CardContent>
       </Card>
 
