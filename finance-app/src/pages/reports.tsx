@@ -41,7 +41,7 @@ export default function Reports() {
   const totalBalance = totalIncome - totalExpenses;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Reports</h2>
         <p className="text-muted-foreground">Analyze your financial performance over time.</p>
@@ -54,7 +54,7 @@ export default function Reports() {
           { label: "Net Balance", value: totalBalance, color: totalBalance >= 0 ? "text-emerald-500" : "text-rose-500" },
         ].map(({ label, value, color }) => (
           <Card key={label}>
-            <CardContent className="p-6">
+            <CardContent className="p-5">
               <p className="text-sm font-medium text-muted-foreground">{label}</p>
               {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
                 <h3 className={`text-2xl font-bold mt-2 ${color}`}>${Math.abs(value).toFixed(2)}</h3>
@@ -85,7 +85,7 @@ export default function Reports() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle>Cash Flow</CardTitle></CardHeader>
           <CardContent>

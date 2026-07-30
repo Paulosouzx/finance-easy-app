@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAccounts, createAccount, getAccountMembers, inviteAccountMember, removeAccountMember } from "@/services/accounts";
-import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2 } from "lucide-react";
+import { getAccounts, createAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
+import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -78,7 +79,7 @@ export default function Accounts() {
   const shareAccount = accounts?.find(a => a.id === shareAccountId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Contas</h2>
@@ -138,11 +139,11 @@ export default function Accounts() {
       </div>
 
       <Card className="bg-primary text-primary-foreground border-none">
-        <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="text-primary-foreground/80 font-medium">Saldo Total</p>
-            <h3 className="text-4xl font-bold mt-2">
-              {isLoading ? <Skeleton className="h-10 w-32 bg-primary-foreground/20" /> : `€${totalBalance.toFixed(2)}`}
+            <p className="text-primary-foreground/80 font-medium text-sm">Saldo Total</p>
+            <h3 className="text-3xl font-bold mt-1.5">
+              {isLoading ? <Skeleton className="h-9 w-32 bg-primary-foreground/20" /> : `€${totalBalance.toFixed(2)}`}
             </h3>
           </div>
         </CardContent>
@@ -152,7 +153,7 @@ export default function Accounts() {
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
-              <CardContent className="p-6 space-y-4">
+              <CardContent className="p-5 space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-10 w-10 rounded-lg" />
@@ -164,7 +165,7 @@ export default function Accounts() {
             </Card>
           ))
         ) : accounts?.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
+          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
             Nenhuma conta encontrada. Cria uma para começar.
           </div>
         ) : (
@@ -173,7 +174,7 @@ export default function Accounts() {
             const isOwner = account.owner_id === user?.id;
             return (
               <Card key={account.id} className="hover:border-primary/50 transition-colors group">
-                <CardContent className="p-6">
+                <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div
@@ -224,19 +225,35 @@ export default function Accounts() {
 function ShareAccountDialog({ accountId, accountName }: { accountId: string; accountName: string }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   const { data: members, isLoading } = useQuery({
     queryKey: ["account-members", accountId],
     queryFn: () => getAccountMembers(accountId),
   });
 
+  const { data: results, isFetching: isSearching } = useQuery({
+    queryKey: ["user-search", debouncedQuery],
+    queryFn: () => searchUsers(debouncedQuery),
+    enabled: debouncedQuery.length >= 2,
+  });
+
+  const invitedEmails = new Set(members?.map((m) => m.invited_email));
+
   const inviteMutation = useMutation({
-    mutationFn: () => inviteAccountMember(accountId, email),
-    onSuccess: () => {
-      setEmail("");
+    mutationFn: (target: ProfileSearchResult | { email: string; id?: null }) =>
+      inviteAccountMember(accountId, target.email ?? "", target.id ?? null),
+    onSuccess: (_data, target) => {
+      setQuery("");
+      setDebouncedQuery("");
       queryClient.invalidateQueries({ queryKey: ["account-members", accountId] });
-      toast({ title: "Convite enviado", description: `${email} foi convidado a gerir esta conta.` });
+      toast({ title: "Convite enviado", description: `${target.email} foi convidado a gerir esta conta.` });
     },
     onError: (err) => {
       toast({ title: "Não foi possível convidar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
@@ -249,33 +266,80 @@ function ShareAccountDialog({ accountId, accountName }: { accountId: string; acc
   });
 
   const statusLabel: Record<string, string> = { pending: "Pendente", accepted: "Aceite", declined: "Recusado" };
+  const looksLikeEmail = /^\S+@\S+\.\S+$/.test(query.trim());
+  const alreadyInvited = looksLikeEmail && invitedEmails.has(query.trim().toLowerCase());
 
   return (
     <>
       <DialogHeader>
         <DialogTitle>Partilhar "{accountName}"</DialogTitle>
         <DialogDescription>
-          Convida um segundo utilizador por email para gerir esta conta em conjunto. Assim que aceitar, verá as
-          transações e o saldo em sincronização com a tua conta.
+          Pesquisa por nome, username ou email para convidar alguém a gerir esta conta em conjunto. Assim que
+          aceitar, verá as transações e o saldo em sincronização com a tua conta.
         </DialogDescription>
       </DialogHeader>
 
-      <form
-        className="flex items-end gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (email.trim()) inviteMutation.mutate();
-        }}
-      >
-        <div className="flex-1 space-y-1.5">
-          <Label htmlFor="invite-email">Email do convidado</Label>
-          <Input id="invite-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="pessoa@exemplo.com" />
+      <div className="space-y-1.5">
+        <Label htmlFor="invite-search">Convidar utilizador</Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            id="invite-search"
+            className="pl-9"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Nome, username ou email"
+          />
         </div>
-        <Button type="submit" disabled={inviteMutation.isPending}>
-          {inviteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Convidar
-        </Button>
-      </form>
+
+        {debouncedQuery.length >= 2 && (
+          <div className="rounded-lg border divide-y max-h-56 overflow-y-auto">
+            {isSearching ? (
+              <div className="p-3"><Skeleton className="h-8 w-full" /></div>
+            ) : results?.length ? (
+              results.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  disabled={inviteMutation.isPending || invitedEmails.has((r.email ?? "").toLowerCase())}
+                  onClick={() => inviteMutation.mutate(r)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Avatar className="h-9 w-9 shrink-0">
+                    <AvatarImage src={r.avatar_url ?? undefined} />
+                    <AvatarFallback>{r.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <p className="font-medium truncate">{r.name}</p>
+                    <p className="text-xs text-muted-foreground/80 truncate">@{r.username}</p>
+                    <p className="text-[11px] text-muted-foreground/60 truncate">{r.email}</p>
+                  </div>
+                  {invitedEmails.has((r.email ?? "").toLowerCase()) ? (
+                    <Badge variant="outline" className="text-[10px] shrink-0">Já convidado</Badge>
+                  ) : (
+                    <UserPlus className="w-4 h-4 text-muted-foreground shrink-0" />
+                  )}
+                </button>
+              ))
+            ) : looksLikeEmail ? (
+              <button
+                type="button"
+                disabled={inviteMutation.isPending || alreadyInvited}
+                onClick={() => inviteMutation.mutate({ email: query.trim() })}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/50 disabled:opacity-50"
+              >
+                <UserPlus className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 truncate">
+                  {alreadyInvited ? "Já convidado: " : "Convidar por email: "}
+                  <span className="font-medium">{query.trim()}</span>
+                </span>
+              </button>
+            ) : (
+              <p className="px-3 py-3 text-sm text-muted-foreground">Sem utilizadores encontrados.</p>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-2 pt-2">
         <Label className="text-muted-foreground text-xs uppercase">Membros</Label>

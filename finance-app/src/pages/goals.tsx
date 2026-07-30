@@ -25,7 +25,7 @@ export default function Goals() {
   }, [goals]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Savings Goals</h2>
@@ -37,15 +37,15 @@ export default function Goals() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)
         ) : enriched.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">No active savings goals found.</div>
+          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">No active savings goals found.</div>
         ) : (
           enriched.map(goal => (
             <Card key={goal.id} className="hover:border-primary/50 transition-colors">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary">

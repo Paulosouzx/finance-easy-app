@@ -106,7 +106,7 @@ export default function Dashboard() {
   const recentTransactions = transactions?.slice(0, 5) ?? [];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-12">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title="Total Balance"
@@ -139,22 +139,22 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Cash Flow Evolution</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingTransactions ? (
-              <div className="h-[300px] flex items-center justify-center">
+              <div className="h-[260px] flex items-center justify-center">
                 <Skeleton className="w-full h-full" />
               </div>
             ) : evolution.length === 0 ? (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground border border-dashed rounded-xl bg-muted/20">
+              <div className="h-[260px] flex items-center justify-center text-muted-foreground border border-dashed rounded-xl bg-muted/20">
                 No data available
               </div>
             ) : (
-              <div className="h-[300px] w-full">
+              <div className="h-[260px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={evolution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
@@ -201,15 +201,15 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {isLoadingTransactions ? (
-              <div className="h-[300px] flex items-center justify-center">
+              <div className="h-[260px] flex items-center justify-center">
                 <Skeleton className="w-[200px] h-[200px] rounded-full" />
               </div>
             ) : expensesByCategory.length === 0 ? (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground border border-dashed rounded-xl bg-muted/20">
+              <div className="h-[260px] flex items-center justify-center text-muted-foreground border border-dashed rounded-xl bg-muted/20">
                 No data available
               </div>
             ) : (
-              <div className="h-[300px] w-full flex flex-col items-center">
+              <div className="h-[260px] w-full flex flex-col items-center">
                 <div className="h-[220px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -299,25 +299,25 @@ export default function Dashboard() {
 function SummaryCard({ title, value, change, icon: Icon, isLoading, isCurrency = true, trend }: any) {
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="w-4 h-4 text-primary" />
+          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+            <Icon className="w-3.5 h-3.5 text-primary" />
           </div>
         </div>
-        <div className="mt-4">
+        <div className="mt-3">
           {isLoading ? (
-            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-7 w-24" />
           ) : (
-            <h3 className="text-2xl font-bold tracking-tight">
+            <h3 className="text-xl font-bold tracking-tight">
               {isCurrency ? "$" : ""}
               {value?.toLocaleString(undefined, { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 }) || "0.00"}
             </h3>
           )}
         </div>
         {change !== undefined && (
-          <p className={`text-xs mt-2 font-medium ${change > 0 ? (trend === "down" ? "text-rose-500" : "text-emerald-500") : change < 0 ? (trend === "down" ? "text-emerald-500" : "text-rose-500") : "text-muted-foreground"}`}>
+          <p className={`text-xs mt-1.5 font-medium ${change > 0 ? (trend === "down" ? "text-rose-500" : "text-emerald-500") : change < 0 ? (trend === "down" ? "text-emerald-500" : "text-rose-500") : "text-muted-foreground"}`}>
             {change > 0 ? "+" : ""}
             {change}% from last month
           </p>

@@ -7,9 +7,11 @@ export interface Database {
         Row: {
           id: string;
           name: string;
+          username: string;
           email: string | null;
           avatar_url: string | null;
           theme: string;
+          language: string;
           enabled_modules: string[];
           currency: string;
           created_at: string;
@@ -216,7 +218,25 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      search_profiles: {
+        Args: { search_query: string };
+        Returns: { id: string; name: string; username: string; email: string | null; avatar_url: string | null }[];
+      };
+      get_pending_invites: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          account_id: string;
+          role: string;
+          invited_email: string;
+          status: string;
+          created_at: string;
+          account_name: string;
+          account_type: string;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { useUserPreferences, type AppTheme } from "@/contexts/user-preferences";
+import { useUserPreferences, type AppTheme, type AppLanguage } from "@/contexts/user-preferences";
 import { useAuth } from "@/contexts/auth";
 import { getProfile } from "@/services/profile";
+import { useTranslation } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Check, LogOut } from "lucide-react";
+import { Check, LogOut, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ThemeOption = {
@@ -136,9 +137,10 @@ function ThemeSwatch({ option, selected, onSelect }: { option: ThemeOption; sele
 }
 
 export default function Settings() {
-  const { theme, setTheme, isModuleEnabled, toggleModule } = useUserPreferences();
+  const { theme, setTheme, language, setLanguage, isModuleEnabled, toggleModule } = useUserPreferences();
   const { user, signOut } = useAuth();
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
+  const t = useTranslation();
 
   const displayName = profile?.name || user?.email?.split("@")[0] || "Utilizador";
   const initial = displayName.charAt(0).toUpperCase();
@@ -146,15 +148,15 @@ export default function Settings() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto w-full pb-12">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Definições</h2>
-        <p className="text-muted-foreground">Personaliza a tua conta e as preferências da app.</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h2>
+        <p className="text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       {/* Profile */}
       <Card>
         <CardHeader>
-          <CardTitle>Perfil</CardTitle>
-          <CardDescription>As tuas informações pessoais.</CardDescription>
+          <CardTitle>{t("settings.profile.title")}</CardTitle>
+          <CardDescription>{t("settings.profile.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -166,12 +168,12 @@ export default function Settings() {
               <div className="space-y-1">
                 <h4 className="font-semibold text-lg leading-none">{displayName}</h4>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
-                <Badge variant="secondary" className="mt-1">Plano Gratuito</Badge>
+                <Badge variant="secondary" className="mt-1">{t("settings.profile.freePlan")}</Badge>
               </div>
             </div>
             <Button variant="outline" onClick={() => signOut()}>
               <LogOut className="w-4 h-4 mr-2" />
-              Terminar sessão
+              {t("settings.profile.signOut")}
             </Button>
           </div>
         </CardContent>
@@ -180,8 +182,8 @@ export default function Settings() {
       {/* Appearance */}
       <Card>
         <CardHeader>
-          <CardTitle>Aparência</CardTitle>
-          <CardDescription>Escolhe o tema visual da aplicação. A alteração é imediata.</CardDescription>
+          <CardTitle>{t("settings.appearance.title")}</CardTitle>
+          <CardDescription>{t("settings.appearance.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3">
@@ -197,11 +199,43 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      {/* Language */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("settings.language.title")}</CardTitle>
+          <CardDescription>{t("settings.language.subtitle")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            {(["pt", "en"] as AppLanguage[]).map(lang => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border-2 px-4 py-3 transition-all",
+                  language === lang ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"
+                )}
+              >
+                <Languages className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium flex-1 text-left">
+                  {lang === "pt" ? t("settings.language.pt") : t("settings.language.en")}
+                </span>
+                {language === lang && (
+                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3 text-primary-foreground" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Modules */}
       <Card>
         <CardHeader>
-          <CardTitle>Módulos</CardTitle>
-          <CardDescription>Ativa ou desativa secções da sidebar. Os dados não se perdem ao desativar.</CardDescription>
+          <CardTitle>{t("settings.modules.title")}</CardTitle>
+          <CardDescription>{t("settings.modules.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
           {MODULE_OPTIONS.map(mod => (
@@ -210,7 +244,7 @@ export default function Settings() {
                 <div className="flex items-center gap-2">
                   <Label className="text-base font-medium">{mod.label}</Label>
                   {mod.locked && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">Sempre ativo</Badge>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t("settings.modules.alwaysOn")}</Badge>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">{mod.description}</p>
@@ -230,14 +264,14 @@ export default function Settings() {
       {/* Preferences */}
       <Card>
         <CardHeader>
-          <CardTitle>Preferências Regionais</CardTitle>
-          <CardDescription>Configurações de moeda e região.</CardDescription>
+          <CardTitle>{t("settings.regional.title")}</CardTitle>
+          <CardDescription>{t("settings.regional.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label className="text-base">Moeda</Label>
-              <p className="text-sm text-muted-foreground">Moeda base para todos os valores.</p>
+              <Label className="text-base">{t("settings.regional.currency")}</Label>
+              <p className="text-sm text-muted-foreground">{t("settings.regional.currencyDesc")}</p>
             </div>
             <div className="font-semibold px-3 py-1 bg-secondary rounded-lg">EUR (€)</div>
           </div>

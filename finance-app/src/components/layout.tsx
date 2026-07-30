@@ -12,9 +12,11 @@ import {
   BarChart3,
   Settings,
   Bell,
+  BellOff,
   LogOut,
   Check,
   X,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -30,25 +32,26 @@ import { useUserPreferences } from "@/contexts/user-preferences";
 import { useAuth } from "@/contexts/auth";
 import { getProfile } from "@/services/profile";
 import { getPendingInvites, respondToInvite } from "@/services/accounts";
+import { useTranslation, type TranslationKey } from "@/lib/i18n";
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: TranslationKey;
   moduleKey: string;
   icon: React.ComponentType<{ className?: string }>;
   alwaysOn?: boolean;
 };
 
 const ALL_NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", moduleKey: "dashboard", icon: LayoutDashboard, alwaysOn: true },
-  { href: "/transactions", label: "Transações", moduleKey: "transactions", icon: ArrowLeftRight, alwaysOn: true },
-  { href: "/accounts", label: "Contas", moduleKey: "accounts", icon: Landmark, alwaysOn: true },
-  { href: "/credit-cards", label: "Cartões de Crédito", moduleKey: "credit-cards", icon: CreditCard },
-  { href: "/bills", label: "Contas a Pagar", moduleKey: "bills", icon: Receipt },
-  { href: "/budgets", label: "Orçamentos", moduleKey: "budgets", icon: PieChart },
-  { href: "/goals", label: "Metas", moduleKey: "goals", icon: Target },
-  { href: "/categories", label: "Categorias", moduleKey: "categories", icon: Tags },
-  { href: "/reports", label: "Relatórios", moduleKey: "reports", icon: BarChart3 },
+  { href: "/", labelKey: "nav.dashboard", moduleKey: "dashboard", icon: LayoutDashboard, alwaysOn: true },
+  { href: "/transactions", labelKey: "nav.transactions", moduleKey: "transactions", icon: ArrowLeftRight, alwaysOn: true },
+  { href: "/accounts", labelKey: "nav.accounts", moduleKey: "accounts", icon: Landmark, alwaysOn: true },
+  { href: "/credit-cards", labelKey: "nav.creditCards", moduleKey: "credit-cards", icon: CreditCard },
+  { href: "/bills", labelKey: "nav.bills", moduleKey: "bills", icon: Receipt },
+  { href: "/budgets", labelKey: "nav.budgets", moduleKey: "budgets", icon: PieChart },
+  { href: "/goals", labelKey: "nav.goals", moduleKey: "goals", icon: Target },
+  { href: "/categories", labelKey: "nav.categories", moduleKey: "categories", icon: Tags },
+  { href: "/reports", labelKey: "nav.reports", moduleKey: "reports", icon: BarChart3 },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -56,6 +59,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { isModuleEnabled } = useUserPreferences();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
+  const t = useTranslation();
 
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
   const { data: invites } = useQuery({ queryKey: ["pending-invites"], queryFn: getPendingInvites });
@@ -74,54 +78,55 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const pageTitle = (() => {
-    if (location === "/") return "Dashboard";
+    if (location === "/") return t("nav.dashboard");
+    if (location.startsWith("/settings")) return t("nav.settings");
     const found = ALL_NAV_ITEMS.find(i => i.href !== "/" && location.startsWith(i.href));
-    return found?.label ?? location.split("/")[1].replace(/-/g, " ");
+    return found ? t(found.labelKey) : location.split("/")[1].replace(/-/g, " ");
   })();
 
   return (
     <div className="min-h-screen flex w-full bg-background">
       {/* Sidebar */}
-      <aside className="w-64 border-r bg-sidebar hidden md:flex flex-col">
-        <div className="p-6">
-          <Link href="/" className="flex items-center gap-2 text-primary font-bold text-xl tracking-tight">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-sm font-black">F</span>
+      <aside className="w-60 border-r bg-sidebar hidden md:flex flex-col">
+        <div className="h-14 flex items-center px-5 border-b border-sidebar-border">
+          <Link href="/" className="flex items-center gap-2 text-primary font-bold text-base tracking-tight">
+            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground text-xs font-black">F</span>
             </div>
             FinanceApp
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}>
                 <div
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      ? "bg-primary text-primary-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   }`}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {item.label}
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {t(item.labelKey)}
                 </div>
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border">
           <Link href="/settings">
-            <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            <div className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
               location.startsWith("/settings")
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                ? "bg-primary text-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             }`}>
-              <Settings className="w-5 h-5 shrink-0" />
-              Definições
+              <Settings className="w-4 h-4 shrink-0" />
+              {t("nav.settings")}
             </div>
           </Link>
         </div>
@@ -129,9 +134,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
+        <header className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold capitalize">{pageTitle}</h1>
+            <h1 className="text-lg font-semibold capitalize">{pageTitle}</h1>
           </div>
 
           <div className="flex items-center gap-4">
@@ -140,31 +145,56 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
                   <Bell className="w-5 h-5" />
                   {!!invites?.length && (
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 flex items-center justify-center text-[10px] font-semibold text-primary-foreground bg-primary rounded-full ring-2 ring-background">
+                      {invites.length}
+                    </span>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel>Convites de partilha de conta</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="end" className="w-96 p-0 overflow-hidden">
+                <div className="px-4 py-3 border-b bg-muted/30">
+                  <p className="text-sm font-semibold">{t("header.invitesTitle")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("header.invitesSubtitle")}</p>
+                </div>
                 {!invites?.length ? (
-                  <p className="px-2 py-3 text-sm text-muted-foreground">Sem convites pendentes.</p>
+                  <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                    <BellOff className="w-6 h-6 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">{t("header.noInvites")}</p>
+                  </div>
                 ) : (
-                  invites.map((invite) => (
-                    <div key={invite.id} className="flex items-center justify-between gap-2 px-2 py-2 text-sm">
-                      <span className="truncate">
-                        Convite para <span className="font-medium">{invite.accounts?.name ?? "conta"}</span>
-                      </span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-500" onClick={() => handleRespond(invite.id, true)}>
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-rose-500" onClick={() => handleRespond(invite.id, false)}>
-                          <X className="w-4 h-4" />
-                        </Button>
+                  <div className="divide-y max-h-80 overflow-y-auto">
+                    {invites.map((invite) => (
+                      <div key={invite.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm truncate">
+                            {t("header.inviteFor")} <span className="font-semibold">{invite.account_name}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">{t("header.sharedAccountManagement")}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
+                            onClick={() => handleRespond(invite.id, true)}
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-8 w-8 border-rose-500/30 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500"
+                            onClick={() => handleRespond(invite.id, false)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -190,19 +220,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem asChild>
                   <Link href="/settings" className="cursor-pointer">
                     <Settings className="w-4 h-4 mr-2" />
-                    Definições
+                    {t("nav.settings")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-rose-500 focus:text-rose-500">
                   <LogOut className="w-4 h-4 mr-2" />
-                  Sair
+                  {t("header.signOut")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-5 overflow-y-auto">
           <div className="max-w-6xl mx-auto w-full">
             {children}
           </div>

@@ -23,7 +23,7 @@ export default function CreditCards() {
   }, [cards, transactions]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Credit Cards</h2>
@@ -35,11 +35,11 @@ export default function CreditCards() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl" />)
+          Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)
         ) : enriched.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">No cards found. Add one to get started.</div>
+          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">No cards found. Add one to get started.</div>
         ) : (
           enriched.map(card => {
             const limit = Number(card.credit_limit ?? 0);
@@ -47,7 +47,7 @@ export default function CreditCards() {
             return (
               <Card key={card.id} className="relative overflow-hidden group hover:border-primary/50 transition-all">
                 <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
-                <CardContent className="p-6">
+                <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-2">
                       <CardIcon className="w-5 h-5 text-muted-foreground" />

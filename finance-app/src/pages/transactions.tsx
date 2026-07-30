@@ -18,7 +18,7 @@ export default function Transactions() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
@@ -65,7 +65,7 @@ export default function Transactions() {
                 </div>
               ))
             ) : transactions?.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No transactions found for this period.</div>
+              <div className="p-6 text-center text-muted-foreground">No transactions found for this period.</div>
             ) : (
               transactions?.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer">

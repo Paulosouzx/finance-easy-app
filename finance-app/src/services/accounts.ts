@@ -5,7 +5,7 @@ type Account = Database["public"]["Tables"]["accounts"]["Row"];
 type AccountInsert = Database["public"]["Tables"]["accounts"]["Insert"];
 type AccountUpdate = Database["public"]["Tables"]["accounts"]["Update"];
 export type AccountMember = Database["public"]["Tables"]["account_members"]["Row"];
-export type PendingInvite = AccountMember & { accounts: { name: string; type: string } | null };
+export type PendingInvite = Database["public"]["Functions"]["get_pending_invites"]["Returns"][number];
 
 export async function getAccounts(): Promise<Account[]> {
   const { data, error } = await supabase
@@ -44,13 +44,23 @@ export async function deleteAccount(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function inviteAccountMember(accountId: string, email: string): Promise<void> {
+export type ProfileSearchResult = Database["public"]["Functions"]["search_profiles"]["Returns"][number];
+
+export async function searchUsers(query: string): Promise<ProfileSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  const { data, error } = await supabase.rpc("search_profiles", { search_query: trimmed });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function inviteAccountMember(accountId: string, email: string, userId?: string | null): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
   const { error } = await supabase.from("account_members").insert({
     account_id: accountId,
     invited_email: email.trim().toLowerCase(),
-    user_id: null,
+    user_id: userId ?? null,
     role: "member",
     status: "pending",
   });
@@ -77,14 +87,9 @@ export async function removeAccountMember(memberId: string): Promise<void> {
 export async function getPendingInvites(): Promise<PendingInvite[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) return [];
-  const { data, error } = await supabase
-    .from("account_members")
-    .select("*, accounts(name, type)")
-    .eq("invited_email", user.email.toLowerCase())
-    .eq("status", "pending")
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.rpc("get_pending_invites");
   if (error) throw error;
-  return (data ?? []) as PendingInvite[];
+  return data ?? [];
 }
 
 export async function respondToInvite(memberId: string, accept: boolean): Promise<void> {

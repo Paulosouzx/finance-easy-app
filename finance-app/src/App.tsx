@@ -6,6 +6,7 @@ import { UserPreferencesProvider } from "@/contexts/user-preferences";
 import { AuthProvider, useAuth } from "@/contexts/auth";
 import { Layout } from "@/components/layout";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 
@@ -32,8 +33,9 @@ function FullScreenSpinner() {
 }
 
 function AuthenticatedRouter() {
+  useRealtimeSync();
   return (
-    <UserPreferencesProvider>
+    <>
       <Layout>
         <Switch>
           <Route path="/" component={Dashboard} />
@@ -52,7 +54,7 @@ function AuthenticatedRouter() {
         </Switch>
       </Layout>
       <PwaInstallPrompt />
-    </UserPreferencesProvider>
+    </>
   );
 }
 
@@ -79,12 +81,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
+        <UserPreferencesProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </UserPreferencesProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

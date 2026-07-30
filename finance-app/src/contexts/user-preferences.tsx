@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getProfile, updateProfile, type AppTheme } from "@/services/profile";
+import { getProfile, updateProfile, type AppTheme, type AppLanguage } from "@/services/profile";
 
-export type { AppTheme };
+export type { AppTheme, AppLanguage };
 
 const DEFAULT_MODULES = [
   "dashboard", "transactions", "accounts",
@@ -22,6 +22,8 @@ function applyThemeToDOM(theme: AppTheme) {
 type UserPreferencesContextType = {
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
+  language: AppLanguage;
+  setLanguage: (language: AppLanguage) => void;
   enabledModules: string[];
   toggleModule: (key: string) => void;
   isModuleEnabled: (key: string) => boolean;
@@ -34,6 +36,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   const [theme, setThemeLocal] = useState<AppTheme>(() => {
     return (localStorage.getItem("finance-theme") as AppTheme) ?? "dark";
+  });
+
+  const [language, setLanguageLocal] = useState<AppLanguage>(() => {
+    return (localStorage.getItem("finance-language") as AppLanguage) ?? "pt";
   });
 
   const [enabledModules, setModulesLocal] = useState<string[]>(() => {
@@ -52,8 +58,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!profile) return;
     setThemeLocal(profile.theme);
+    setLanguageLocal(profile.language);
     setModulesLocal(profile.enabled_modules);
     localStorage.setItem("finance-theme", profile.theme);
+    localStorage.setItem("finance-language", profile.language);
     localStorage.setItem("finance-modules", JSON.stringify(profile.enabled_modules));
     applyThemeToDOM(profile.theme);
   }, [profile]);
@@ -63,6 +71,12 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("finance-theme", newTheme);
     applyThemeToDOM(newTheme);
     updateProfile({ theme: newTheme }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
+  };
+
+  const setLanguage = (newLanguage: AppLanguage) => {
+    setLanguageLocal(newLanguage);
+    localStorage.setItem("finance-language", newLanguage);
+    updateProfile({ language: newLanguage }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
   };
 
   const toggleModule = (key: string) => {
@@ -77,7 +91,7 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
   const isModuleEnabled = (key: string) => enabledModules.includes(key);
 
   return (
-    <UserPreferencesContext.Provider value={{ theme, setTheme, enabledModules, toggleModule, isModuleEnabled }}>
+    <UserPreferencesContext.Provider value={{ theme, setTheme, language, setLanguage, enabledModules, toggleModule, isModuleEnabled }}>
       {children}
     </UserPreferencesContext.Provider>
   );

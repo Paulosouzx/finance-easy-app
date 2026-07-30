@@ -147,7 +147,7 @@ export default function Categories() {
     t === "income" ? "Receita" : t === "expense" ? "Despesa" : "Ambos";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Categorias</h2>
@@ -170,7 +170,7 @@ export default function Categories() {
                 </div>
               ))
             ) : topLevel.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">Nenhuma categoria encontrada.</div>
+              <div className="p-6 text-center text-muted-foreground">Nenhuma categoria encontrada.</div>
             ) : (
               topLevel.map(cat => {
                 const subs = byParent.get(cat.id) ?? [];

@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/lib/i18n";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
+  const t = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -76,7 +78,7 @@ export default function Login() {
             <span className="text-primary-foreground text-lg font-black">F</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-primary">FinanceApp</h1>
-          <p className="text-sm text-muted-foreground">Gestão financeira pessoal e partilhada.</p>
+          <p className="text-sm text-muted-foreground">{t("auth.appTagline")}</p>
         </div>
 
         {!configured && (
@@ -90,8 +92,8 @@ export default function Login() {
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle>Bem-vindo</CardTitle>
-            <CardDescription>Entra na tua conta ou cria uma nova.</CardDescription>
+            <CardTitle>{t("auth.welcome")}</CardTitle>
+            <CardDescription>{t("auth.tagline")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
@@ -102,7 +104,7 @@ export default function Login() {
               onClick={handleGoogle}
             >
               {googleLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FcGoogle className="w-4 h-4 mr-2" />}
-              Continuar com Google
+              {t("auth.continueGoogle")}
             </Button>
 
             <div className="relative">
@@ -110,20 +112,20 @@ export default function Login() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">ou com email</span>
+                <span className="bg-card px-2 text-muted-foreground">{t("auth.orEmail")}</span>
               </div>
             </div>
 
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar conta</TabsTrigger>
+                <TabsTrigger value="signin">{t("auth.signIn")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth.signUp")}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin" className="mt-4">
                 <form className="space-y-4" onSubmit={handleSignIn}>
                   <div className="space-y-1.5">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">{t("auth.email")}</Label>
                     <Input
                       id="signin-email"
                       type="email"
@@ -134,7 +136,7 @@ export default function Login() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="signin-password">Palavra-passe</Label>
+                    <Label htmlFor="signin-password">{t("auth.password")}</Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -146,7 +148,7 @@ export default function Login() {
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !configured}>
                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Entrar
+                    {t("auth.signIn")}
                   </Button>
                 </form>
               </TabsContent>
@@ -154,7 +156,7 @@ export default function Login() {
               <TabsContent value="signup" className="mt-4">
                 <form className="space-y-4" onSubmit={handleSignUp}>
                   <div className="space-y-1.5">
-                    <Label htmlFor="signup-name">Nome</Label>
+                    <Label htmlFor="signup-name">{t("auth.name")}</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -164,7 +166,7 @@ export default function Login() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">{t("auth.email")}</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -175,7 +177,7 @@ export default function Login() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="signup-password">Palavra-passe</Label>
+                    <Label htmlFor="signup-password">{t("auth.password")}</Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -188,7 +190,7 @@ export default function Login() {
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !configured}>
                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Criar conta
+                    {t("auth.signUp")}
                   </Button>
                 </form>
               </TabsContent>

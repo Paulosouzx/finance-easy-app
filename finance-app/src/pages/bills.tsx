@@ -1,18 +1,45 @@
-import { useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBills, payBill } from "@/services/bills";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getBills, payBill, createBill } from "@/services/bills";
 import { getAccounts } from "@/services/accounts";
-import { Plus, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { getCategories } from "@/services/categories";
+import { Plus, CheckCircle2, AlertCircle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { format, differenceInCalendarDays } from "date-fns";
+
+const RECURRENCE_LABELS: Record<string, string> = {
+  once: "Uma vez",
+  weekly: "Semanal",
+  monthly: "Mensal",
+  yearly: "Anual",
+};
 
 export default function Bills() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [addOpen, setAddOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
+
   const { data: bills, isLoading } = useQuery({ queryKey: ["bills"], queryFn: getBills });
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: getAccounts });
+  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
+  const expenseCategories = categories?.filter(c => c.type !== "income") ?? [];
 
   const enriched = useMemo(() => {
     if (!bills) return [];
@@ -27,6 +54,27 @@ export default function Bills() {
   const upcomingTotal = enriched.filter(b => !b.isOverdue && b.status !== "paid").reduce((s, b) => s + Number(b.amount), 0);
   const paidTotal = enriched.filter(b => b.status === "paid").reduce((s, b) => s + Number(b.amount), 0);
 
+  const createMutation = useMutation({
+    mutationFn: () =>
+      createBill({
+        name: form.name,
+        amount: Number(form.amount) || 0,
+        due_date: form.due_date,
+        category_id: form.category_id || null,
+        account_id: form.account_id || null,
+        status: "pending",
+        recurrence: form.recurrence,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      setAddOpen(false);
+      setForm({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
+    },
+    onError: (err) => {
+      toast({ title: "Não foi possível criar a conta a pagar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    },
+  });
+
   async function handleMarkPaid(billId: string) {
     const defaultAccountId = accounts?.[0]?.id;
     if (!defaultAccountId) return;
@@ -37,35 +85,100 @@ export default function Bills() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Bills</h2>
-          <p className="text-muted-foreground">Keep track of your upcoming and overdue bills.</p>
+          <h2 className="text-2xl font-bold tracking-tight">Contas a Pagar</h2>
+          <p className="text-muted-foreground">Acompanha as tuas contas pendentes e em atraso.</p>
         </div>
-        <Button className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Bill
-        </Button>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Conta a Pagar
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova conta a pagar</DialogTitle>
+              <DialogDescription>Regista uma despesa recorrente ou pontual para não perderes o prazo.</DialogDescription>
+            </DialogHeader>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                createMutation.mutate();
+              }}
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="bill-name">Nome</Label>
+                <Input id="bill-name" required value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Renda, eletricidade, ginásio..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="bill-amount">Valor</Label>
+                  <Input id="bill-amount" type="number" step="0.01" required value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="bill-due">Vencimento</Label>
+                  <Input id="bill-due" type="date" required value={form.due_date} onChange={(e) => setForm(f => ({ ...f, due_date: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Categoria</Label>
+                <Select value={form.category_id} onValueChange={(v) => setForm(f => ({ ...f, category_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                  <SelectContent>
+                    {expenseCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Conta associada</Label>
+                <Select value={form.account_id} onValueChange={(v) => setForm(f => ({ ...f, account_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts?.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Recorrência</Label>
+                <Select value={form.recurrence} onValueChange={(v) => setForm(f => ({ ...f, recurrence: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(RECURRENCE_LABELS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Criar conta a pagar
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5" /><p className="font-medium">Overdue</p></div>
-            <h3 className="text-2xl font-bold">${overdueTotal.toFixed(2)}</h3>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5" /><p className="font-medium">Em atraso</p></div>
+            <h3 className="text-2xl font-bold">€{overdueTotal.toFixed(2)}</h3>
           </CardContent>
         </Card>
         <Card className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-2"><Clock className="w-5 h-5" /><p className="font-medium">Upcoming</p></div>
-            <h3 className="text-2xl font-bold">${upcomingTotal.toFixed(2)}</h3>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2"><Clock className="w-5 h-5" /><p className="font-medium">Por vencer</p></div>
+            <h3 className="text-2xl font-bold">€{upcomingTotal.toFixed(2)}</h3>
           </CardContent>
         </Card>
         <Card className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-2"><CheckCircle2 className="w-5 h-5" /><p className="font-medium">Paid this month</p></div>
-            <h3 className="text-2xl font-bold">${paidTotal.toFixed(2)}</h3>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-2"><CheckCircle2 className="w-5 h-5" /><p className="font-medium">Pagas este mês</p></div>
+            <h3 className="text-2xl font-bold">€{paidTotal.toFixed(2)}</h3>
           </CardContent>
         </Card>
       </div>
@@ -81,7 +194,7 @@ export default function Bills() {
                 </div>
               ))
             ) : enriched.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No bills found. Add one to get started.</div>
+              <div className="p-6 text-center text-muted-foreground">Nenhuma conta a pagar encontrada. Cria uma para começar.</div>
             ) : (
               enriched.map((bill) => (
                 <div key={bill.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
@@ -92,21 +205,21 @@ export default function Bills() {
                     <div>
                       <p className="font-medium leading-none">{bill.name}</p>
                       <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs text-muted-foreground">{format(new Date(bill.due_date), "MMM d, yyyy")}</span>
+                        <span className="text-xs text-muted-foreground">{format(new Date(bill.due_date), "dd MMM yyyy")}</span>
                         {bill.status === "paid" ? (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Paid</Badge>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Paga</Badge>
                         ) : bill.isOverdue ? (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-rose-500/10 text-rose-500 border-rose-500/20">Overdue by {Math.abs(bill.daysUntilDue)} days</Badge>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-rose-500/10 text-rose-500 border-rose-500/20">Atrasada há {Math.abs(bill.daysUntilDue)} dias</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-500/10 text-amber-500 border-amber-500/20">In {bill.daysUntilDue} days</Badge>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-500/10 text-amber-500 border-amber-500/20">Em {bill.daysUntilDue} dias</Badge>
                         )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="text-right"><div className="font-semibold">${Number(bill.amount).toFixed(2)}</div></div>
+                    <div className="text-right"><div className="font-semibold">€{Number(bill.amount).toFixed(2)}</div></div>
                     {bill.status !== "paid" && (
-                      <Button size="sm" variant="outline" className="hidden sm:flex" onClick={() => handleMarkPaid(bill.id)}>Mark Paid</Button>
+                      <Button size="sm" variant="outline" className="hidden sm:flex" onClick={() => handleMarkPaid(bill.id)}>Marcar como paga</Button>
                     )}
                   </div>
                 </div>
