@@ -68,14 +68,14 @@ export default function Transactions() {
               <div className="p-6 text-center text-muted-foreground">No transactions found for this period.</div>
             ) : (
               transactions?.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
+                <div key={tx.id} className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
                       {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                     </div>
-                    <div>
-                      <p className="font-medium">{tx.description || (tx as any).categories?.name || "Transaction"}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{tx.description || (tx as any).categories?.name || "Transaction"}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-xs text-muted-foreground">{format(new Date(tx.date), "MMM d, yyyy")}</span>
                         {(tx as any).credit_cards?.name && (
                           <>
@@ -89,7 +89,7 @@ export default function Transactions() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : ""}`}>
                       {tx.type === "income" ? "+" : "-"}${Math.abs(Number(tx.amount)).toFixed(2)}
                     </div>

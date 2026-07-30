@@ -153,7 +153,7 @@ export default function Categories() {
           <h2 className="text-2xl font-bold tracking-tight">Categorias</h2>
           <p className="text-muted-foreground">Organiza e classifica as tuas transações.</p>
         </div>
-        <Button onClick={openCreate}>
+        <Button className="w-full sm:w-auto" onClick={openCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Nova Categoria
         </Button>
@@ -268,7 +268,7 @@ export default function Categories() {
 
             <div className="space-y-1.5">
               <Label>Ícone</Label>
-              <div className="grid grid-cols-8 gap-1.5 p-3 bg-secondary/50 rounded-lg max-h-36 overflow-y-auto">
+              <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 p-3 bg-secondary/50 rounded-lg max-h-36 overflow-y-auto">
                 {ICON_OPTIONS.map(({ key, icon: Ic }) => (
                   <button
                     key={key}

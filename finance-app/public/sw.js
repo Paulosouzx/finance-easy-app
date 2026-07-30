@@ -28,21 +28,23 @@ self.addEventListener("activate", (event) => {
 });
 
 // Fetch strategy:
-//   - API / Supabase calls → network only, never cache
+//   - API / Supabase calls → not intercepted at all, browser handles the request directly
 //   - Static assets (JS, CSS, fonts, images) → cache first, fallback network + update cache
 //   - Navigation requests → network first, fallback cached index.html (SPA offline shell)
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Never cache: API endpoints, Supabase, analytics, external POST/PUT/DELETE
+  // Never touch: API endpoints, Supabase, analytics, external POST/PATCH/PUT/DELETE.
+  // Re-issuing a cross-origin, preflighted request via fetch(request) inside the SW
+  // breaks the CORS preflight in Chrome (bugs.chromium.org/p/chromium/issues/detail?id=1224423),
+  // so these requests must fall through to the browser's native network handling untouched.
   const isApi =
     url.pathname.startsWith("/api/") ||
     url.hostname.includes("supabase.co") ||
     request.method !== "GET";
 
   if (isApi) {
-    event.respondWith(fetch(request));
     return;
   }
 

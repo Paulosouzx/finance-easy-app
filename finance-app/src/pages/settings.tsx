@@ -186,7 +186,7 @@ export default function Settings() {
           <CardDescription>{t("settings.appearance.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {THEME_OPTIONS.map(option => (
               <ThemeSwatch
                 key={option.key}
@@ -206,7 +206,7 @@ export default function Settings() {
           <CardDescription>{t("settings.language.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(["pt", "en"] as AppLanguage[]).map(lang => (
               <button
                 key={lang}

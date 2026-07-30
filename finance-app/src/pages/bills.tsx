@@ -75,14 +75,21 @@ export default function Bills() {
     },
   });
 
-  async function handleMarkPaid(billId: string) {
-    const defaultAccountId = accounts?.[0]?.id;
-    if (!defaultAccountId) return;
-    await payBill(billId, defaultAccountId);
-    queryClient.invalidateQueries({ queryKey: ["bills"] });
-    queryClient.invalidateQueries({ queryKey: ["transactions"] });
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
-  }
+  const payMutation = useMutation({
+    mutationFn: (billId: string) => {
+      const defaultAccountId = accounts?.[0]?.id;
+      if (!defaultAccountId) throw new Error("Nenhuma conta disponível");
+      return payBill(billId, defaultAccountId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (err) => {
+      toast({ title: "Não foi possível marcar como paga", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    },
+  });
 
   return (
     <div className="space-y-5">
@@ -219,7 +226,19 @@ export default function Bills() {
                   <div className="flex items-center gap-4">
                     <div className="text-right"><div className="font-semibold">€{Number(bill.amount).toFixed(2)}</div></div>
                     {bill.status !== "paid" && (
-                      <Button size="sm" variant="outline" className="hidden sm:flex" onClick={() => handleMarkPaid(bill.id)}>Marcar como paga</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={payMutation.isPending}
+                        onClick={() => payMutation.mutate(bill.id)}
+                      >
+                        {payMutation.isPending && payMutation.variables === bill.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin sm:mr-2" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 sm:mr-2" />
+                        )}
+                        <span className="hidden sm:inline">Marcar como paga</span>
+                      </Button>
                     )}
                   </div>
                 </div>

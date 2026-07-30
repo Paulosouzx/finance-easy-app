@@ -47,11 +47,19 @@ export async function payBill(id: string, accountId: string): Promise<void> {
     .eq("id", id)
     .single();
   if (fetchError) throw fetchError;
+  if (bill.status === "paid") return;
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
 
-  await supabase.from("transactions").insert({
+  const { error: updateError } = await supabase
+    .from("bills")
+    .update({ status: "paid" })
+    .eq("id", id)
+    .eq("status", bill.status);
+  if (updateError) throw updateError;
+
+  const { error: insertError } = await supabase.from("transactions").insert({
     account_id: accountId,
     created_by: user.id,
     category_id: bill.category_id,
@@ -64,8 +72,7 @@ export async function payBill(id: string, accountId: string): Promise<void> {
     recurrence: "once",
     tags: [],
   });
-
-  await supabase.from("bills").update({ status: "paid" }).eq("id", id);
+  if (insertError) throw insertError;
 }
 
 export async function deleteBill(id: string): Promise<void> {

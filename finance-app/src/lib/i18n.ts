@@ -12,6 +12,7 @@ const dictionaries = {
     "nav.categories": "Categorias",
     "nav.reports": "Relatórios",
     "nav.settings": "Definições",
+    "nav.more": "Mais",
 
     "header.invitesTitle": "Convites de partilha",
     "header.invitesSubtitle": "Pedidos para geres contas em conjunto.",
@@ -19,6 +20,13 @@ const dictionaries = {
     "header.inviteFor": "Convite para",
     "header.sharedAccountManagement": "Gestão partilhada de conta",
     "header.signOut": "Sair",
+    "header.inviteModalTitle": "Convite de partilha",
+    "header.invitedBy": "Convidado por",
+    "header.unknownInviter": "Utilizador desconhecido",
+    "header.inviteModalDescription": "Ao aceitares, vais poder ver e gerir as transações desta conta partilhada.",
+    "header.accept": "Aceitar",
+    "header.decline": "Recusar",
+    "header.cancel": "Cancelar",
 
     "settings.title": "Definições",
     "settings.subtitle": "Personaliza a tua conta e as preferências da app.",
@@ -62,6 +70,7 @@ const dictionaries = {
     "nav.categories": "Categories",
     "nav.reports": "Reports",
     "nav.settings": "Settings",
+    "nav.more": "More",
 
     "header.invitesTitle": "Sharing invites",
     "header.invitesSubtitle": "Requests to manage accounts together.",
@@ -69,6 +78,13 @@ const dictionaries = {
     "header.inviteFor": "Invite for",
     "header.sharedAccountManagement": "Shared account management",
     "header.signOut": "Sign out",
+    "header.inviteModalTitle": "Sharing invite",
+    "header.invitedBy": "Invited by",
+    "header.unknownInviter": "Unknown user",
+    "header.inviteModalDescription": "By accepting, you'll be able to view and manage transactions on this shared account.",
+    "header.accept": "Accept",
+    "header.decline": "Decline",
+    "header.cancel": "Cancel",
 
     "settings.title": "Settings",
     "settings.subtitle": "Customize your account and app preferences.",

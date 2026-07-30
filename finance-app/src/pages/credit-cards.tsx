@@ -29,7 +29,7 @@ export default function CreditCards() {
           <h2 className="text-2xl font-bold tracking-tight">Credit Cards</h2>
           <p className="text-muted-foreground">Manage your credit cards and invoices.</p>
         </div>
-        <Button>
+        <Button className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Add Card
         </Button>

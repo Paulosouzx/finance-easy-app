@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,6 +18,7 @@ import {
   Check,
   X,
   Users,
+  Menu,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -28,10 +30,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useUserPreferences } from "@/contexts/user-preferences";
 import { useAuth } from "@/contexts/auth";
 import { getProfile } from "@/services/profile";
-import { getPendingInvites, respondToInvite } from "@/services/accounts";
+import { getPendingInvites, respondToInvite, type PendingInvite } from "@/services/accounts";
 import { useTranslation, type TranslationKey } from "@/lib/i18n";
 
 type NavItem = {
@@ -56,6 +67,9 @@ const ALL_NAV_ITEMS: NavItem[] = [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [selectedInvite, setSelectedInvite] = useState<PendingInvite | null>(null);
+  const [responding, setResponding] = useState(false);
   const { isModuleEnabled } = useUserPreferences();
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -68,13 +82,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
     item => item.alwaysOn || isModuleEnabled(item.moduleKey)
   );
 
+  const tabItems = visibleItems.filter(item => item.alwaysOn);
+  const moreItems = visibleItems.filter(item => !item.alwaysOn);
+
   const displayName = profile?.name || user?.email?.split("@")[0] || "Utilizador";
   const initial = displayName.charAt(0).toUpperCase();
 
   async function handleRespond(memberId: string, accept: boolean) {
-    await respondToInvite(memberId, accept);
-    queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
-    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    setResponding(true);
+    try {
+      await respondToInvite(memberId, accept);
+      queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      setSelectedInvite(null);
+    } finally {
+      setResponding(false);
+    }
   }
 
   const pageTitle = (() => {
@@ -134,12 +157,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold capitalize">{pageTitle}</h1>
+        <header className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
+          <div className="flex items-center gap-4 min-w-0">
+            <Link href="/" className="flex items-center gap-2 text-primary font-bold md:hidden shrink-0">
+              <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground text-xs font-black">F</span>
+              </div>
+            </Link>
+            <h1 className="text-lg font-semibold capitalize truncate">{pageTitle}</h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
@@ -179,7 +207,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             size="icon"
                             variant="outline"
                             className="h-8 w-8 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500"
-                            onClick={() => handleRespond(invite.id, true)}
+                            onClick={() => setSelectedInvite(invite)}
                           >
                             <Check className="w-4 h-4" />
                           </Button>
@@ -187,7 +215,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             size="icon"
                             variant="outline"
                             className="h-8 w-8 border-rose-500/30 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500"
-                            onClick={() => handleRespond(invite.id, false)}
+                            onClick={() => setSelectedInvite(invite)}
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -232,12 +260,134 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <div className="flex-1 p-5 overflow-y-auto">
+        <div className="flex-1 p-4 md:p-5 pb-24 md:pb-5 overflow-y-auto">
           <div className="max-w-6xl mx-auto w-full">
             {children}
           </div>
         </div>
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-card/95 backdrop-blur-sm border-t flex items-stretch"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {tabItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+          return (
+            <Link key={item.href} href={item.href} className="flex-1">
+              <div
+                className={`flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium ${
+                  isActive ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                {t(item.labelKey)}
+              </div>
+            </Link>
+          );
+        })}
+        <button
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium ${
+            moreOpen || location.startsWith("/settings") || moreItems.some(i => location.startsWith(i.href))
+              ? "text-primary"
+              : "text-muted-foreground"
+          }`}
+          onClick={() => setMoreOpen(true)}
+        >
+          <Menu className="w-5 h-5" />
+          {t("nav.more")}
+        </button>
+      </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="md:hidden rounded-t-xl max-h-[70vh] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{t("nav.more")}</SheetTitle>
+          </SheetHeader>
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            {moreItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.startsWith(item.href);
+              return (
+                <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)}>
+                  <div
+                    className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 text-xs font-medium ${
+                      isActive ? "bg-primary text-primary-foreground border-primary" : "text-foreground"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {t(item.labelKey)}
+                  </div>
+                </Link>
+              );
+            })}
+            <Link href="/settings" onClick={() => setMoreOpen(false)}>
+              <div
+                className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 text-xs font-medium ${
+                  location.startsWith("/settings") ? "bg-primary text-primary-foreground border-primary" : "text-foreground"
+                }`}
+              >
+                <Settings className="w-5 h-5" />
+                {t("nav.settings")}
+              </div>
+            </Link>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={!!selectedInvite} onOpenChange={(open) => !open && setSelectedInvite(null)}>
+        <DialogContent className="sm:max-w-sm">
+          {selectedInvite && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("header.inviteModalTitle")}</DialogTitle>
+                <DialogDescription>{t("header.inviteModalDescription")}</DialogDescription>
+              </DialogHeader>
+
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={selectedInvite.inviter_avatar_url ?? undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                    {(selectedInvite.inviter_name || selectedInvite.inviter_email || "?").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">{t("header.invitedBy")}</p>
+                  <p className="text-sm font-semibold truncate">
+                    {selectedInvite.inviter_name || selectedInvite.inviter_email || t("header.unknownInviter")}
+                  </p>
+                  {selectedInvite.inviter_name && selectedInvite.inviter_email && (
+                    <p className="text-xs text-muted-foreground truncate">{selectedInvite.inviter_email}</p>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-sm">
+                {t("header.inviteFor")} <span className="font-semibold">{selectedInvite.account_name}</span>
+              </p>
+
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button variant="outline" onClick={() => setSelectedInvite(null)} disabled={responding}>
+                  {t("header.cancel")}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-rose-500/30 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500"
+                  onClick={() => handleRespond(selectedInvite.id, false)}
+                  disabled={responding}
+                >
+                  {t("header.decline")}
+                </Button>
+                <Button onClick={() => handleRespond(selectedInvite.id, true)} disabled={responding}>
+                  {t("header.accept")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

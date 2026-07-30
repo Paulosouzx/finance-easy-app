@@ -273,17 +273,17 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-4">
               {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between group hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
+                <div key={tx.id} className="flex items-center justify-between gap-3 group hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors cursor-pointer">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
                       {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                     </div>
-                    <div>
-                      <p className="font-medium text-sm leading-none">{tx.description || (tx as any).categories?.name || "Transaction"}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm leading-none truncate">{tx.description || (tx as any).categories?.name || "Transaction"}</p>
                       <p className="text-xs text-muted-foreground mt-1.5">{format(new Date(tx.date), "MMM d, yyyy")}</p>
                     </div>
                   </div>
-                  <div className={`font-semibold text-sm ${tx.type === "income" ? "text-emerald-500" : ""}`}>
+                  <div className={`font-semibold text-sm shrink-0 ${tx.type === "income" ? "text-emerald-500" : ""}`}>
                     {tx.type === "income" ? "+" : "-"}${Math.abs(Number(tx.amount)).toFixed(2)}
                   </div>
                 </div>

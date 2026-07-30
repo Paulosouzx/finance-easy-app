@@ -31,7 +31,7 @@ export default function Goals() {
           <h2 className="text-2xl font-bold tracking-tight">Savings Goals</h2>
           <p className="text-muted-foreground">Plan for the future and track your progress.</p>
         </div>
-        <Button>
+        <Button className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Add Goal
         </Button>

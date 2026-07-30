@@ -234,6 +234,9 @@ export interface Database {
           created_at: string;
           account_name: string;
           account_type: string;
+          inviter_name: string | null;
+          inviter_email: string | null;
+          inviter_avatar_url: string | null;
         }[];
       };
     };
