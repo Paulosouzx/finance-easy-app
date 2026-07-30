@@ -113,10 +113,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <aside className="w-60 border-r bg-sidebar hidden md:flex flex-col">
         <div className="h-14 flex items-center px-5 border-b border-sidebar-border">
           <Link href="/" className="flex items-center gap-2 text-primary font-bold text-base tracking-tight">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-black">F</span>
-            </div>
-            FinanceApp
+            <img src="/favicon.svg" alt="" className="w-7 h-7 rounded-md shrink-0" />
+            Finance Easy
           </Link>
         </div>
 
@@ -160,9 +158,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
           <div className="flex items-center gap-4 min-w-0">
             <Link href="/" className="flex items-center gap-2 text-primary font-bold md:hidden shrink-0">
-              <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xs font-black">F</span>
-              </div>
+              <img src="/favicon.svg" alt="" className="w-7 h-7 rounded-md" />
             </Link>
             <h1 className="text-lg font-semibold capitalize truncate">{pageTitle}</h1>
           </div>

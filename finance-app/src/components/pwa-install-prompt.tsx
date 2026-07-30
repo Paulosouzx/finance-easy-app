@@ -27,7 +27,7 @@ export function PwaInstallPrompt() {
           <Download className="w-4 h-4 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Instalar FinanceApp</p>
+          <p className="text-sm font-semibold">Instalar Finance Easy</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Toca em <strong>Partilhar</strong> → <strong>Adicionar ao Ecrã Principal</strong>
           </p>
@@ -47,7 +47,7 @@ export function PwaInstallPrompt() {
         <Download className="w-4 h-4 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold">Instalar FinanceApp</p>
+        <p className="text-sm font-semibold">Instalar Finance Easy</p>
         <p className="text-xs text-muted-foreground mt-0.5">Acesso rápido sem browser</p>
       </div>
       <div className="flex items-center gap-2 shrink-0">

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { FcGoogle } from "react-icons/fc";
 import { Loader2 } from "lucide-react";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function Login() {
   const { signIn, signUp, signInWithGoogle } = useAuth();
@@ -71,13 +72,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeSwitcher />
+      </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground text-lg font-black">F</span>
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
+            <img src="/favicon.svg" alt="" className="w-full h-full" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-primary">FinanceApp</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-primary">Finance Easy</h1>
           <p className="text-sm text-muted-foreground">{t("auth.appTagline")}</p>
         </div>
 

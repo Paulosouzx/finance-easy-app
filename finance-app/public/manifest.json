@@ -1,6 +1,6 @@
 {
-  "name": "FinanceApp",
-  "short_name": "FinanceApp",
+  "name": "Finance Easy",
+  "short_name": "Finance Easy",
   "description": "Gestão financeira pessoal — receitas, despesas, cartões e metas",
   "start_url": "/",
   "display": "standalone",
