@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,14 +22,30 @@ import Goals from "@/pages/goals";
 import Categories from "@/pages/categories";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
-import { Loader2 } from "lucide-react";
+import { PiggyBank } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 function FullScreenSpinner() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#8B3CF7] to-[#5B1FC7]">
+      <div className="flex flex-col items-center gap-5">
+        <div className="relative flex items-center justify-center">
+          <span className="absolute inline-flex h-24 w-24 rounded-full bg-white/20 animate-ping" />
+          <div className="relative flex items-center justify-center w-24 h-24 rounded-3xl bg-white/10 backdrop-blur-sm ring-1 ring-white/25 shadow-xl">
+            <PiggyBank className="w-12 h-12 text-white" strokeWidth={1.75} />
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="w-2 h-2 rounded-full bg-white/80 animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -61,8 +78,21 @@ function AuthenticatedRouter() {
 
 function Router() {
   const { user, loading } = useAuth();
+  const [justSignedIn, setJustSignedIn] = useState(false);
+  const wasSignedIn = useRef(false);
 
-  if (loading) return <FullScreenSpinner />;
+  useEffect(() => {
+    if (!wasSignedIn.current && user) {
+      setJustSignedIn(true);
+      const timer = setTimeout(() => setJustSignedIn(false), 800);
+      wasSignedIn.current = true;
+      return () => clearTimeout(timer);
+    }
+    wasSignedIn.current = !!user;
+    return undefined;
+  }, [user]);
+
+  if (loading || justSignedIn) return <FullScreenSpinner />;
 
   if (!user) {
     return (

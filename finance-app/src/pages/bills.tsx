@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBills, payBill, createBill } from "@/services/bills";
+import { getBills, payBill, createBill, updateBill, deleteBill } from "@/services/bills";
 import { getAccounts } from "@/services/accounts";
 import { getCategories } from "@/services/categories";
-import { Plus, CheckCircle2, AlertCircle, Clock, Loader2 } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInCalendarDays } from "date-fns";
@@ -33,7 +43,9 @@ const RECURRENCE_LABELS: Record<string, string> = {
 export default function Bills() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [addOpen, setAddOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
 
   const { data: bills, isLoading } = useQuery({ queryKey: ["bills"], queryFn: getBills });
@@ -54,24 +66,57 @@ export default function Bills() {
   const upcomingTotal = enriched.filter(b => !b.isOverdue && b.status !== "paid").reduce((s, b) => s + Number(b.amount), 0);
   const paidTotal = enriched.filter(b => b.status === "paid").reduce((s, b) => s + Number(b.amount), 0);
 
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createBill({
+  function openCreate() {
+    setEditingId(null);
+    setForm({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
+    setModalOpen(true);
+  }
+
+  function openEdit(bill: NonNullable<typeof bills>[number]) {
+    setEditingId(bill.id);
+    setForm({
+      name: bill.name ?? "",
+      amount: String(bill.amount ?? ""),
+      due_date: bill.due_date,
+      category_id: bill.category_id ?? "",
+      account_id: bill.account_id ?? "",
+      recurrence: bill.recurrence ?? "monthly",
+    });
+    setModalOpen(true);
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const payload = {
         name: form.name,
         amount: Number(form.amount) || 0,
         due_date: form.due_date,
         category_id: form.category_id || null,
         account_id: form.account_id || null,
-        status: "pending",
         recurrence: form.recurrence,
-      }),
+      };
+      if (editingId) return updateBill(editingId, payload);
+      return createBill({ ...payload, status: "pending" });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
-      setAddOpen(false);
+      setModalOpen(false);
+      setEditingId(null);
       setForm({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
     },
     onError: (err) => {
-      toast({ title: "Não foi possível criar a conta a pagar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      toast({ title: "Não foi possível guardar a conta a pagar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteBill(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bills"] });
+      setDeleteId(null);
+    },
+    onError: (err) => {
+      toast({ title: "Não foi possível eliminar a conta a pagar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     },
   });
 
@@ -98,23 +143,23 @@ export default function Bills() {
           <h2 className="text-2xl font-bold tracking-tight">Contas a Pagar</h2>
           <p className="text-muted-foreground">Acompanha as tuas contas pendentes e em atraso.</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setEditingId(null); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Conta a Pagar
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova conta a pagar</DialogTitle>
+              <DialogTitle>{editingId ? "Editar conta a pagar" : "Nova conta a pagar"}</DialogTitle>
               <DialogDescription>Regista uma despesa recorrente ou pontual para não perderes o prazo.</DialogDescription>
             </DialogHeader>
             <form
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                createMutation.mutate();
+                saveMutation.mutate();
               }}
             >
               <div className="space-y-1.5">
@@ -159,9 +204,9 @@ export default function Bills() {
                 </Select>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Criar conta a pagar
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingId ? "Guardar Alterações" : "Criar conta a pagar"}
                 </Button>
               </DialogFooter>
             </form>
@@ -204,14 +249,14 @@ export default function Bills() {
               <div className="p-6 text-center text-muted-foreground">Nenhuma conta a pagar encontrada. Cria uma para começar.</div>
             ) : (
               enriched.map((bill) => (
-                <div key={bill.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <div key={bill.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => openEdit(bill)}>
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
                       <Receipt className="w-5 h-5 text-muted-foreground" />
                     </div>
-                    <div>
-                      <p className="font-medium leading-none">{bill.name}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
+                    <div className="min-w-0">
+                      <p className="font-medium leading-none truncate">{bill.name}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="text-xs text-muted-foreground">{format(new Date(bill.due_date), "dd MMM yyyy")}</span>
                         {bill.status === "paid" ? (
                           <Badge variant="outline" className="text-[10px] h-4 px-1 bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Paga</Badge>
@@ -223,14 +268,14 @@ export default function Bills() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 shrink-0">
                     <div className="text-right"><div className="font-semibold">€{Number(bill.amount).toFixed(2)}</div></div>
                     {bill.status !== "paid" && (
                       <Button
                         size="sm"
                         variant="outline"
                         disabled={payMutation.isPending}
-                        onClick={() => payMutation.mutate(bill.id)}
+                        onClick={(e) => { e.stopPropagation(); payMutation.mutate(bill.id); }}
                       >
                         {payMutation.isPending && payMutation.variables === bill.id ? (
                           <Loader2 className="w-4 h-4 animate-spin sm:mr-2" />
@@ -240,6 +285,12 @@ export default function Bills() {
                         <span className="hidden sm:inline">Marcar como paga</span>
                       </Button>
                     )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEdit(bill); }}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(bill.id); }}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))
@@ -247,6 +298,24 @@ export default function Bills() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteId != null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar conta a pagar?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação é permanente e não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

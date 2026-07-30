@@ -109,13 +109,13 @@ export default function Dashboard() {
     <div className="space-y-5 pb-12">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
-          title="Total Balance"
+          title="Saldo Total"
           value={summary?.totalBalance}
           icon={Wallet}
           isLoading={isLoadingSummary}
         />
         <SummaryCard
-          title="Monthly Income"
+          title="Receita Mensal"
           value={summary?.monthlyIncome}
           change={summary?.monthlyIncomeChange}
           icon={ArrowUpRight}
@@ -123,7 +123,7 @@ export default function Dashboard() {
           trend="up"
         />
         <SummaryCard
-          title="Monthly Expenses"
+          title="Despesa Mensal"
           value={summary?.monthlyExpenses}
           change={summary?.monthlyExpensesChange}
           icon={ArrowDownRight}
@@ -131,7 +131,7 @@ export default function Dashboard() {
           trend="down"
         />
         <SummaryCard
-          title="Open Invoices"
+          title="Faturas em Aberto"
           value={summary?.openCardInvoices}
           icon={CreditCard}
           isLoading={isLoadingSummary}
@@ -142,7 +142,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Cash Flow Evolution</CardTitle>
+            <CardTitle>Evolução do Fluxo de Caixa</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingTransactions ? (
@@ -151,7 +151,7 @@ export default function Dashboard() {
               </div>
             ) : evolution.length === 0 ? (
               <div className="h-[260px] flex items-center justify-center text-muted-foreground border border-dashed rounded-xl bg-muted/20">
-                No data available
+                Sem dados disponíveis
               </div>
             ) : (
               <div className="h-[260px] w-full">
@@ -179,15 +179,15 @@ export default function Dashboard() {
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                      tickFormatter={(value) => `$${value}`}
+                      tickFormatter={(value) => `€${value}`}
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       itemStyle={{ color: "hsl(var(--foreground))" }}
-                      formatter={(value: number) => [`$${value.toFixed(2)}`, undefined]}
+                      formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
                     />
-                    <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Income" />
-                    <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Expenses" />
+                    <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Receitas" />
+                    <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Despesas" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -197,7 +197,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
+            <CardTitle>Despesas por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingTransactions ? (
@@ -206,7 +206,7 @@ export default function Dashboard() {
               </div>
             ) : expensesByCategory.length === 0 ? (
               <div className="h-[260px] flex items-center justify-center text-muted-foreground border border-dashed rounded-xl bg-muted/20">
-                No data available
+                Sem dados disponíveis
               </div>
             ) : (
               <div className="h-[260px] w-full flex flex-col items-center">
@@ -228,7 +228,7 @@ export default function Dashboard() {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, undefined]}
+                        formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
                         contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       />
                     </PieChart>
@@ -241,7 +241,7 @@ export default function Dashboard() {
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: exp.categoryColor || "hsl(var(--primary))" }} />
                         <span className="truncate max-w-[100px]">{exp.categoryName}</span>
                       </div>
-                      <span className="font-medium">${exp.amount.toFixed(2)}</span>
+                      <span className="font-medium">€{exp.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -253,7 +253,7 @@ export default function Dashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>Transações Recentes</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingTransactions ? (
@@ -269,7 +269,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : recentTransactions.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">No recent transactions</div>
+            <div className="text-center py-6 text-muted-foreground">Sem transações recentes</div>
           ) : (
             <div className="space-y-4">
               {recentTransactions.map((tx) => (
@@ -279,12 +279,12 @@ export default function Dashboard() {
                       {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-sm leading-none truncate">{tx.description || (tx as any).categories?.name || "Transaction"}</p>
-                      <p className="text-xs text-muted-foreground mt-1.5">{format(new Date(tx.date), "MMM d, yyyy")}</p>
+                      <p className="font-medium text-sm leading-none truncate">{tx.description || (tx as any).categories?.name || "Transação"}</p>
+                      <p className="text-xs text-muted-foreground mt-1.5">{format(new Date(tx.date), "dd MMM yyyy")}</p>
                     </div>
                   </div>
                   <div className={`font-semibold text-sm shrink-0 ${tx.type === "income" ? "text-emerald-500" : ""}`}>
-                    {tx.type === "income" ? "+" : "-"}${Math.abs(Number(tx.amount)).toFixed(2)}
+                    {tx.type === "income" ? "+" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -311,7 +311,7 @@ function SummaryCard({ title, value, change, icon: Icon, isLoading, isCurrency =
             <Skeleton className="h-7 w-24" />
           ) : (
             <h3 className="text-xl font-bold tracking-tight">
-              {isCurrency ? "$" : ""}
+              {isCurrency ? "€" : ""}
               {value?.toLocaleString(undefined, { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 }) || "0.00"}
             </h3>
           )}
@@ -319,7 +319,7 @@ function SummaryCard({ title, value, change, icon: Icon, isLoading, isCurrency =
         {change !== undefined && (
           <p className={`text-xs mt-1.5 font-medium ${change > 0 ? (trend === "down" ? "text-rose-500" : "text-emerald-500") : change < 0 ? (trend === "down" ? "text-emerald-500" : "text-rose-500") : "text-muted-foreground"}`}>
             {change > 0 ? "+" : ""}
-            {change}% from last month
+            {change}% em relação ao mês anterior
           </p>
         )}
       </CardContent>

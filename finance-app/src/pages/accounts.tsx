@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAccounts, createAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
-import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus } from "lucide-react";
+import { getAccounts, createAccount, updateAccount, deleteAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
+import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth";
@@ -45,7 +55,9 @@ export default function Accounts() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [addOpen, setAddOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [shareAccountId, setShareAccountId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR" });
 
@@ -55,23 +67,56 @@ export default function Accounts() {
     enabled: !!user,
   });
 
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createAccount({
+  function openCreate() {
+    setEditingId(null);
+    setForm({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR" });
+    setModalOpen(true);
+  }
+
+  function openEdit(account: NonNullable<typeof accounts>[number]) {
+    setEditingId(account.id);
+    setForm({
+      name: account.name ?? "",
+      type: account.type ?? "checking",
+      institution: account.institution ?? "",
+      balance: String(account.balance ?? "0"),
+      currency: account.currency ?? "EUR",
+    });
+    setModalOpen(true);
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const payload = {
         name: form.name,
         type: form.type,
         institution: form.institution || null,
         balance: Number(form.balance) || 0,
         currency: form.currency,
         color: null,
-      }),
+      };
+      if (editingId) return updateAccount(editingId, payload);
+      return createAccount(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      setAddOpen(false);
+      setModalOpen(false);
+      setEditingId(null);
       setForm({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR" });
     },
     onError: (err) => {
-      toast({ title: "Não foi possível criar a conta", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      toast({ title: "Não foi possível guardar a conta", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAccount(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      setDeleteId(null);
+    },
+    onError: (err) => {
+      toast({ title: "Não foi possível eliminar a conta", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     },
   });
 
@@ -85,16 +130,16 @@ export default function Accounts() {
           <h2 className="text-2xl font-bold tracking-tight">Contas</h2>
           <p className="text-muted-foreground">Gere as tuas contas bancárias, carteiras e dívidas partilhadas.</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setEditingId(null); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Conta
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova conta</DialogTitle>
+              <DialogTitle>{editingId ? "Editar conta" : "Nova conta"}</DialogTitle>
               <DialogDescription>
                 Contas do tipo "Dívida" podem ser partilhadas com um segundo utilizador para gestão conjunta.
               </DialogDescription>
@@ -103,7 +148,7 @@ export default function Accounts() {
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                createMutation.mutate();
+                saveMutation.mutate();
               }}
             >
               <div className="space-y-1.5">
@@ -128,9 +173,9 @@ export default function Accounts() {
                 <Input id="account-balance" type="number" step="0.01" value={form.balance} onChange={(e) => setForm(f => ({ ...f, balance: e.target.value }))} />
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Criar conta
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingId ? "Guardar Alterações" : "Criar conta"}
                 </Button>
               </DialogFooter>
             </form>
@@ -188,9 +233,21 @@ export default function Accounts() {
                         <p className="text-xs text-muted-foreground mt-1.5 capitalize">{account.type} &bull; {account.institution || "Outra"}</p>
                       </div>
                     </div>
-                    {!isOwner && (
-                      <Badge variant="outline" className="text-[10px]">Partilhada</Badge>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!isOwner && (
+                        <Badge variant="outline" className="text-[10px] mr-1">Partilhada</Badge>
+                      )}
+                      {isOwner && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openEdit(account)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setDeleteId(account.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-end justify-between">
                     <h4 className="text-2xl font-bold">€{Number(account.balance).toFixed(2)}</h4>
@@ -218,6 +275,24 @@ export default function Accounts() {
           {shareAccount && <ShareAccountDialog accountId={shareAccount.id} accountName={shareAccount.name} />}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteId != null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar conta?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação é permanente. As transações associadas a esta conta não serão eliminadas.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

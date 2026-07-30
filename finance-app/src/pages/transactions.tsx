@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getTransactions, createTransaction } from "@/services/transactions";
+import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from "@/services/transactions";
 import { getAccounts } from "@/services/accounts";
 import { getCategories } from "@/services/categories";
 import { getCreditCards } from "@/services/creditCards";
 import { format } from "date-fns";
-import { Plus, ArrowDownRight, ArrowUpRight, Search, Filter, Loader2 } from "lucide-react";
+import { Plus, ArrowDownRight, ArrowUpRight, Search, Filter, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const EMPTY_FORM = {
@@ -38,7 +48,9 @@ export default function Transactions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [addOpen, setAddOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
   const { data: transactions, isLoading } = useQuery({
@@ -50,10 +62,30 @@ export default function Transactions() {
   const { data: cards } = useQuery({ queryKey: ["credit-cards"], queryFn: getCreditCards });
   const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both") ?? [];
 
-  const createMutation = useMutation({
+  function openCreate() {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setModalOpen(true);
+  }
+
+  function openEdit(tx: NonNullable<typeof transactions>[number]) {
+    setEditingId(tx.id);
+    setForm({
+      type: tx.type as "income" | "expense",
+      description: tx.description ?? "",
+      amount: String(tx.amount ?? ""),
+      date: tx.date,
+      category_id: tx.category_id ?? "",
+      account_id: tx.account_id ?? "",
+      card_id: tx.card_id ?? "",
+    });
+    setModalOpen(true);
+  }
+
+  const saveMutation = useMutation({
     mutationFn: () => {
       if (!form.account_id) throw new Error("Escolhe uma conta");
-      return createTransaction({
+      const payload = {
         account_id: form.account_id,
         category_id: form.category_id || null,
         card_id: form.card_id || null,
@@ -61,19 +93,33 @@ export default function Transactions() {
         type: form.type,
         description: form.description,
         date: form.date,
-        status: "paid",
-        recurrence: "once",
-        tags: [],
-      });
+      };
+      if (editingId) {
+        return updateTransaction(editingId, payload);
+      }
+      return createTransaction({ ...payload, status: "paid", recurrence: "once", tags: [] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
-      setAddOpen(false);
+      setModalOpen(false);
+      setEditingId(null);
       setForm(EMPTY_FORM);
     },
     onError: (err) => {
-      toast({ title: "Não foi possível criar a transação", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      toast({ title: "Não foi possível guardar a transação", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteTransaction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      setDeleteId(null);
+    },
+    onError: (err) => {
+      toast({ title: "Não foi possível eliminar a transação", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     },
   });
 
@@ -81,26 +127,26 @@ export default function Transactions() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Transactions</h2>
-          <p className="text-muted-foreground">Manage your income and expenses.</p>
+          <h2 className="text-2xl font-bold tracking-tight">Transações</h2>
+          <p className="text-muted-foreground">Gere as tuas receitas e despesas.</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setEditingId(null); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Transaction
+              Nova Transação
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova transação</DialogTitle>
-              <DialogDescription>Regista uma receita ou despesa.</DialogDescription>
+              <DialogTitle>{editingId ? "Editar transação" : "Nova transação"}</DialogTitle>
+              <DialogDescription>{editingId ? "Atualiza os dados desta transação." : "Regista uma receita ou despesa."}</DialogDescription>
             </DialogHeader>
             <form
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                createMutation.mutate();
+                saveMutation.mutate();
               }}
             >
               <div className="grid grid-cols-2 gap-3">
@@ -163,9 +209,9 @@ export default function Transactions() {
                 </div>
               )}
               <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Criar transação
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingId ? "Guardar Alterações" : "Criar transação"}
                 </Button>
               </DialogFooter>
             </form>
@@ -179,7 +225,7 @@ export default function Transactions() {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search transactions..." className="pl-9 bg-muted/50 border-none" />
+                <Input placeholder="Pesquisar transações..." className="pl-9 bg-muted/50 border-none" />
               </div>
               <Button variant="outline" size="icon" className="shrink-0">
                 <Filter className="w-4 h-4" />
@@ -208,18 +254,22 @@ export default function Transactions() {
                 </div>
               ))
             ) : transactions?.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">No transactions found for this period.</div>
+              <div className="p-6 text-center text-muted-foreground">Nenhuma transação encontrada para este período.</div>
             ) : (
               transactions?.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer">
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => openEdit(tx)}
+                >
                   <div className="flex items-center gap-4 min-w-0">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
                       {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium truncate">{tx.description || (tx as any).categories?.name || "Transaction"}</p>
+                      <p className="font-medium truncate">{tx.description || (tx as any).categories?.name || "Transação"}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">{format(new Date(tx.date), "MMM d, yyyy")}</span>
+                        <span className="text-xs text-muted-foreground">{format(new Date(tx.date), "dd MMM yyyy")}</span>
                         {(tx as any).credit_cards?.name && (
                           <>
                             <span className="text-xs text-muted-foreground">&bull;</span>
@@ -227,15 +277,33 @@ export default function Transactions() {
                           </>
                         )}
                         {tx.status === "pending" && (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1 ml-1 bg-amber-500/10 text-amber-500 border-amber-500/20">Pending</Badge>
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 ml-1 bg-amber-500/10 text-amber-500 border-amber-500/20">Pendente</Badge>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : ""}`}>
-                      {tx.type === "income" ? "+" : "-"}${Math.abs(Number(tx.amount)).toFixed(2)}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="text-right mr-1">
+                      <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : ""}`}>
+                        {tx.type === "income" ? "+" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
+                      </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); openEdit(tx); }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeleteId(tx.id); }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))
@@ -243,6 +311,24 @@ export default function Transactions() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteId != null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar transação?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação é permanente e não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

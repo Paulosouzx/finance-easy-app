@@ -301,3 +301,20 @@
     cursor: not-allowed;
   }
 }
+
+/* Em mobile, evita seleção de texto acidental ao tocar/arrastar na UI,
+   mantendo a seleção livre em campos de input e conteúdo editável. */
+@media (max-width: 768px) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input,
+  textarea,
+  [contenteditable="true"],
+  [data-selectable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}

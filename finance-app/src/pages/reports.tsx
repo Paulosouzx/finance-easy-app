@@ -43,21 +43,21 @@ export default function Reports() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Reports</h2>
-        <p className="text-muted-foreground">Analyze your financial performance over time.</p>
+        <h2 className="text-2xl font-bold tracking-tight">Relatórios</h2>
+        <p className="text-muted-foreground">Analisa o teu desempenho financeiro ao longo do tempo.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Total Income", value: totalIncome, color: "text-emerald-500" },
-          { label: "Total Expenses", value: totalExpenses, color: "text-rose-500" },
-          { label: "Net Balance", value: totalBalance, color: totalBalance >= 0 ? "text-emerald-500" : "text-rose-500" },
+          { label: "Receita Total", value: totalIncome, color: "text-emerald-500" },
+          { label: "Despesa Total", value: totalExpenses, color: "text-rose-500" },
+          { label: "Saldo Líquido", value: totalBalance, color: totalBalance >= 0 ? "text-emerald-500" : "text-rose-500" },
         ].map(({ label, value, color }) => (
           <Card key={label}>
             <CardContent className="p-5">
               <p className="text-sm font-medium text-muted-foreground">{label}</p>
               {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-                <h3 className={`text-2xl font-bold mt-2 ${color}`}>${Math.abs(value).toFixed(2)}</h3>
+                <h3 className={`text-2xl font-bold mt-2 ${color}`}>€{Math.abs(value).toFixed(2)}</h3>
               )}
             </CardContent>
           </Card>
@@ -65,7 +65,7 @@ export default function Reports() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Income vs Expenses</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Receitas vs Despesas</CardTitle></CardHeader>
         <CardContent>
           {isLoading ? <Skeleton className="h-[300px] w-full" /> : (
             <div className="h-[300px]">
@@ -73,11 +73,11 @@ export default function Reports() {
                 <BarChart data={evolution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => `$${v}`} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`$${v.toFixed(2)}`, undefined]} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => `€${v}`} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`€${v.toFixed(2)}`, undefined]} />
                   <Legend />
-                  <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="income" name="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expenses" name="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -87,7 +87,7 @@ export default function Reports() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader><CardTitle>Cash Flow</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Fluxo de Caixa</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-[250px] w-full" /> : (
               <div className="h-[250px]">
@@ -101,9 +101,9 @@ export default function Reports() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => `$${v}`} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`$${v.toFixed(2)}`, undefined]} />
-                    <Area type="monotone" dataKey="balance" name="Balance" stroke="#7B2FF7" strokeWidth={2} fill="url(#balanceGrad)" />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => `€${v}`} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`€${v.toFixed(2)}`, undefined]} />
+                    <Area type="monotone" dataKey="balance" name="Saldo" stroke="#7B2FF7" strokeWidth={2} fill="url(#balanceGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -112,10 +112,10 @@ export default function Reports() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Expenses by Category</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Despesas por Categoria</CardTitle></CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-[250px] w-full" /> : expensesByCategory.length === 0 ? (
-              <div className="h-[250px] flex items-center justify-center text-muted-foreground">No expense data available.</div>
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">Sem dados de despesas disponíveis.</div>
             ) : (
               <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -125,7 +125,7 @@ export default function Reports() {
                         <Cell key={i} fill={entry.color || `hsl(var(--chart-${(i % 5) + 1}))`} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, undefined]} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} />
+                    <Tooltip formatter={(v: number) => [`€${v.toFixed(2)}`, undefined]} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1.5 mt-2 max-h-[60px] overflow-y-auto">
@@ -135,7 +135,7 @@ export default function Reports() {
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color || "hsl(var(--primary))" }} />
                         <span>{e.name}</span>
                       </div>
-                      <span className="font-medium">${e.amount.toFixed(2)}</span>
+                      <span className="font-medium">€{e.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
