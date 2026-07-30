@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserPreferencesProvider } from "@/contexts/user-preferences";
 import { AuthProvider, useAuth } from "@/contexts/auth";
+import { PwaInstallProvider } from "@/contexts/pwa-install";
 import { Layout } from "@/components/layout";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
@@ -79,18 +80,20 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <UserPreferencesProvider>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
-        </UserPreferencesProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <PwaInstallProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <UserPreferencesProvider>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </TooltipProvider>
+          </UserPreferencesProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </PwaInstallProvider>
   );
 }
 

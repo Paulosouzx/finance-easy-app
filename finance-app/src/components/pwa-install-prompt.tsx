@@ -1,52 +1,26 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
+import { usePwaInstall } from "@/contexts/pwa-install";
 
 export function PwaInstallPrompt() {
-  const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
+  const { isStandalone, isIos, canInstall, promptInstall } = usePwaInstall();
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem("pwa-install-dismissed") === "1"
   );
 
-  useEffect(() => {
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
-
-    if (iOS && !isStandalone) setIsIOS(true);
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setPromptEvent(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
   const handleInstall = async () => {
-    if (!promptEvent) return;
-    await promptEvent.prompt();
-    const { outcome } = await promptEvent.userChoice;
-    if (outcome === "accepted") {
-      setPromptEvent(null);
-    }
+    await promptInstall();
   };
 
   const handleDismiss = () => {
     localStorage.setItem("pwa-install-dismissed", "1");
     setDismissed(true);
-    setPromptEvent(null);
-    setIsIOS(false);
   };
 
-  if (dismissed) return null;
+  if (dismissed || isStandalone) return null;
 
-  if (isIOS) {
+  if (isIos) {
     return (
       <div className="fixed bottom-4 left-4 right-4 z-50 bg-card border border-border rounded-xl p-4 shadow-lg flex items-start gap-3 max-w-sm mx-auto">
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -65,7 +39,7 @@ export function PwaInstallPrompt() {
     );
   }
 
-  if (!promptEvent) return null;
+  if (!canInstall) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 bg-card border border-border rounded-xl p-4 shadow-lg flex items-center gap-3 max-w-sm mx-auto">

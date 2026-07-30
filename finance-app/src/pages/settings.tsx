@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Check, LogOut, Languages, Download, CheckCircle2, Share } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { usePwaInstall } from "@/contexts/pwa-install";
 
 type ThemeOption = {
   key: AppTheme;

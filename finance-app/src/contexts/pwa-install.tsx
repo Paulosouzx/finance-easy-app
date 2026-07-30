@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -13,10 +13,19 @@ function isStandaloneDisplay() {
 }
 
 function isIosDevice() {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !("MSStream" in window);
 }
 
-export function usePwaInstall() {
+type PwaInstallContextType = {
+  isStandalone: boolean;
+  isIos: boolean;
+  canInstall: boolean;
+  promptInstall: () => Promise<void>;
+};
+
+const PwaInstallContext = createContext<PwaInstallContextType | null>(null);
+
+export function PwaInstallProvider({ children }: { children: ReactNode }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -47,10 +56,17 @@ export function usePwaInstall() {
     setDeferredPrompt(null);
   }
 
-  return {
-    isStandalone,
-    isIos: isIosDevice(),
-    canInstall: !!deferredPrompt,
-    promptInstall,
-  };
+  return (
+    <PwaInstallContext.Provider
+      value={{ isStandalone, isIos: isIosDevice(), canInstall: !!deferredPrompt, promptInstall }}
+    >
+      {children}
+    </PwaInstallContext.Provider>
+  );
+}
+
+export function usePwaInstall() {
+  const ctx = useContext(PwaInstallContext);
+  if (!ctx) throw new Error("usePwaInstall must be used inside PwaInstallProvider");
+  return ctx;
 }
