@@ -49,3 +49,5 @@ finance-app/.env
 # Playwright MCP test artifacts (logs, snapshots)
 .playwright-mcp/
 *.log
+.vercel
+.env*

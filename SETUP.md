@@ -117,14 +117,27 @@ pnpm --filter @workspace/finance-app run build
 ```
 
 ### Deploy no Vercel
-```bash
-npx vercel --cwd /finance-app
-```
-Define as variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` nas settings do projeto Vercel.
+Repo é um monorepo pnpm (`finance-app` + `scripts`). O projeto está linkado a partir da **raiz** do repo (não da subpasta), porque o `package.json` do `finance-app` usa `catalog:` (pnpm workspace catalog) e isso só resolve com o `pnpm-lock.yaml`/`pnpm-workspace.yaml` da raiz visíveis no build.
 
-### Deploy no Netlify
-Configura `/finance-app/dist/public` como pasta de publicação.
-Adiciona as variáveis de ambiente na UI do Netlify.
+O `vercel.json` na raiz do repo já define tudo:
+- **Install Command**: `pnpm install`
+- **Build Command**: `pnpm --filter @workspace/finance-app run build`
+- **Output Directory**: `finance-app/dist/public`
+- Rewrite SPA (todas as rotas caem em `index.html`)
+- `Cache-Control: no-cache` em `sw.js`/`manifest.json` para o service worker nunca ficar preso numa versão antiga
+
+Variáveis de ambiente definidas nas Settings do projeto (Production + Preview):
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Deploy manual a partir da raiz do repo:
+```bash
+npx vercel --prod
+```
+
+Deploy automático a cada push: liga o repositório GitHub ao projeto em vercel.com → Project Settings → Git (a app do GitHub da Vercel precisa de estar instalada/autorizada no repositório).
+
+Depois do primeiro deploy, adiciona o domínio da Vercel (e o domínio custom, se tiveres um) em Supabase → **Authentication** → **URL Configuration** → **Redirect URLs** (ex: `https://teu-projeto.vercel.app/**`), senão o login com Google fica preso a redirecionar para o `localhost`.
 
 ---
 

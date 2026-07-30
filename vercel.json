@@ -1,0 +1,18 @@
+{
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm --filter @workspace/finance-app run build",
+  "outputDirectory": "finance-app/dist/public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    }
+  ]
+}
