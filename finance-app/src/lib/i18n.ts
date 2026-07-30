@@ -52,7 +52,7 @@ const dictionaries = {
     "settings.install.button": "Instalar App",
     "settings.install.installed": "App instalada",
     "settings.install.installedDesc": "Já estás a usar a app instalada.",
-    "settings.install.iosInstructions": "No Safari: toca em Partilhar e depois em \"Adicionar ao Ecrã Principal\".",
+    "settings.install.iosInstructions": "Toca no ícone Partilhar do navegador e depois em \"Adicionar ao Ecrã Principal\".",
     "settings.install.unsupported": "Instalação não disponível neste navegador. Usa o menu do navegador e procura \"Instalar app\" ou \"Adicionar ao ecrã principal\".",
 
     "auth.welcome": "Bem-vindo",
@@ -117,7 +117,7 @@ const dictionaries = {
     "settings.install.button": "Install App",
     "settings.install.installed": "App installed",
     "settings.install.installedDesc": "You're already using the installed app.",
-    "settings.install.iosInstructions": "In Safari: tap Share, then \"Add to Home Screen\".",
+    "settings.install.iosInstructions": "Tap your browser's Share icon, then \"Add to Home Screen\".",
     "settings.install.unsupported": "Install isn't available in this browser. Check the browser menu for \"Install app\" or \"Add to home screen\".",
 
     "auth.welcome": "Welcome",
