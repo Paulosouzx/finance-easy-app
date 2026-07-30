@@ -1,14 +1,40 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { getAccounts } from "@/services/accounts";
 import { getTransactions } from "@/services/transactions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownRight, ArrowUpRight, CreditCard, Wallet } from "lucide-react";
-import { format, startOfMonth, subMonths } from "date-fns";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
+import { Button } from "@/components/ui/button";
+import { ArrowDownRight, ArrowUpRight, CreditCard, Wallet, AreaChart as AreaChartIcon, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
+import { format, subMonths } from "date-fns";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Area,
+  Line,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { cn } from "@/lib/utils";
+
+type ChartType = "area" | "line" | "bar";
+
+const CHART_TYPE_OPTIONS: { value: ChartType; label: string; icon: typeof AreaChartIcon }[] = [
+  { value: "area", label: "Área", icon: AreaChartIcon },
+  { value: "line", label: "Linha", icon: LineChartIcon },
+  { value: "bar", label: "Barras", icon: BarChart3 },
+];
+
+const EMERGENCY_FUND_COLOR = "#F59E0B";
 
 export default function Dashboard() {
+  const [chartType, setChartType] = useState<ChartType>("area");
   const { data: accounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ["accounts"],
     queryFn: getAccounts,
@@ -68,10 +94,15 @@ export default function Dashboard() {
       const expenses = transactions
         .filter((t) => t.date.startsWith(monthKey) && t.type === "expense")
         .reduce((sum, t) => sum + Number(t.amount), 0);
+      const emergencyFund = transactions
+        .filter((t) => t.date.startsWith(monthKey) && (t as any).categories?.type === "savings")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
 
-      return { label: format(monthDate, "MMM"), income, expenses };
+      return { label: format(monthDate, "MMM"), income, expenses, emergencyFund };
     });
   }, [transactions]);
+
+  const hasEmergencyFundData = evolution.some((m) => m.emergencyFund > 0);
 
   // --- Despesas por categoria (mês atual) ---
   const expensesByCategory = useMemo(() => {
@@ -141,8 +172,26 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
             <CardTitle>Evolução do Fluxo de Caixa</CardTitle>
+            <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
+              {CHART_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title={label}
+                  onClick={() => setChartType(value)}
+                  className={cn(
+                    "h-7 w-7 text-muted-foreground hover:text-foreground",
+                    chartType === value && "bg-background text-foreground shadow-sm"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </Button>
+              ))}
+            </div>
           </CardHeader>
           <CardContent>
             {isLoadingTransactions ? (
@@ -156,7 +205,7 @@ export default function Dashboard() {
             ) : (
               <div className="h-[260px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={evolution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <ComposedChart data={evolution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -186,9 +235,35 @@ export default function Dashboard() {
                       itemStyle={{ color: "hsl(var(--foreground))" }}
                       formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
                     />
-                    <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Receitas" />
-                    <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Despesas" />
-                  </AreaChart>
+                    {chartType === "area" && (
+                      <>
+                        <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Receitas" />
+                        <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Despesas" />
+                      </>
+                    )}
+                    {chartType === "line" && (
+                      <>
+                        <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={false} name="Receitas" />
+                        <Line type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Despesas" />
+                      </>
+                    )}
+                    {chartType === "bar" && (
+                      <>
+                        <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Receitas" />
+                        <Bar dataKey="expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Despesas" />
+                      </>
+                    )}
+                    {hasEmergencyFundData && (
+                      <Line
+                        type="monotone"
+                        dataKey="emergencyFund"
+                        stroke={EMERGENCY_FUND_COLOR}
+                        strokeWidth={2}
+                        dot={false}
+                        name="Fundo de Emergência"
+                      />
+                    )}
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             )}

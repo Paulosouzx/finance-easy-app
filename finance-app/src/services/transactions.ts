@@ -16,7 +16,7 @@ export type TransactionFilters = {
 export async function getTransactions(filters: TransactionFilters = {}): Promise<Transaction[]> {
   let query = supabase
     .from("transactions")
-    .select("*, categories(name, icon, color), credit_cards(name)")
+    .select("*, categories(name, icon, color, type), credit_cards(name)")
     .order("date", { ascending: false });
 
   if (filters.accountId) query = query.eq("account_id", filters.accountId);

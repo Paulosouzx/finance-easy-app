@@ -60,7 +60,7 @@ export default function Transactions() {
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: getAccounts });
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
   const { data: cards } = useQuery({ queryKey: ["credit-cards"], queryFn: getCreditCards });
-  const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both") ?? [];
+  const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both" || c.type === "savings") ?? [];
 
   function openCreate() {
     setEditingId(null);

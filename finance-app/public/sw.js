@@ -1,4 +1,4 @@
-const CACHE_NAME = "financeapp-v1";
+const CACHE_NAME = "financeapp-v2";
 
 const STATIC_PRECACHE = [
   "/",
@@ -48,7 +48,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static asset: cache first
+  // Static asset: stale-while-revalidate — respond instantly from cache when available,
+  // but always refetch in the background so a new deploy (new icons, new bundle) is
+  // picked up on the *next* load instead of being stuck forever behind a cache-first hit.
   const isStaticAsset =
     url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|ico|woff2?|ttf|otf|webp)$/) != null;
 
@@ -56,10 +58,13 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         const cached = await cache.match(request);
-        if (cached) return cached;
-        const response = await fetch(request);
-        if (response.ok) cache.put(request, response.clone());
-        return response;
+        const networkFetch = fetch(request)
+          .then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => cached);
+        return cached ?? networkFetch;
       })
     );
     return;

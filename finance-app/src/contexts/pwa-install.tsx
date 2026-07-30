@@ -16,9 +16,17 @@ function isIosDevice() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent) && !("MSStream" in window);
 }
 
+function isMobileDevice() {
+  return (
+    /android|iphone|ipad|ipod/i.test(window.navigator.userAgent) ||
+    window.matchMedia?.("(pointer: coarse)").matches
+  );
+}
+
 type PwaInstallContextType = {
   isStandalone: boolean;
   isIos: boolean;
+  isMobile: boolean;
   canInstall: boolean;
   promptInstall: () => Promise<void>;
 };
@@ -58,7 +66,13 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
 
   return (
     <PwaInstallContext.Provider
-      value={{ isStandalone, isIos: isIosDevice(), canInstall: !!deferredPrompt, promptInstall }}
+      value={{
+        isStandalone,
+        isIos: isIosDevice(),
+        isMobile: isMobileDevice(),
+        canInstall: !!deferredPrompt,
+        promptInstall,
+      }}
     >
       {children}
     </PwaInstallContext.Provider>

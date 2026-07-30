@@ -45,7 +45,7 @@ const COLOR_PALETTE = [
 
 type CategoryForm = {
   name: string;
-  type: "income" | "expense" | "both";
+  type: "income" | "expense" | "both" | "savings";
   icon: string;
   color: string;
   parentId: string;
@@ -144,7 +144,7 @@ export default function Categories() {
   }
 
   const typeLabel = (t: string) =>
-    t === "income" ? "Receita" : t === "expense" ? "Despesa" : "Ambos";
+    t === "income" ? "Receita" : t === "expense" ? "Despesa" : t === "savings" ? "Fundo de Emergência" : "Ambos";
 
   return (
     <div className="space-y-5">
@@ -249,6 +249,7 @@ export default function Categories() {
                   <SelectItem value="expense">Despesa</SelectItem>
                   <SelectItem value="income">Receita</SelectItem>
                   <SelectItem value="both">Ambos</SelectItem>
+                  <SelectItem value="savings">Fundo de Emergência</SelectItem>
                 </SelectContent>
               </Select>
             </div>

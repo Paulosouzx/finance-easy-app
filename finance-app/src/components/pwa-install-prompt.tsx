@@ -4,7 +4,7 @@ import { Download, X } from "lucide-react";
 import { usePwaInstall } from "@/contexts/pwa-install";
 
 export function PwaInstallPrompt() {
-  const { isStandalone, isIos, canInstall, promptInstall } = usePwaInstall();
+  const { isStandalone, isIos, isMobile, canInstall, promptInstall } = usePwaInstall();
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem("pwa-install-dismissed") === "1"
   );
@@ -18,7 +18,7 @@ export function PwaInstallPrompt() {
     setDismissed(true);
   };
 
-  if (dismissed || isStandalone) return null;
+  if (dismissed || isStandalone || !isMobile) return null;
 
   if (isIos) {
     return (
