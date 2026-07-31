@@ -6,7 +6,8 @@ import { getAccounts } from "@/services/accounts";
 import { getCategories } from "@/services/categories";
 import { getCreditCards } from "@/services/creditCards";
 import { format } from "date-fns";
-import { Plus, ArrowDownRight, ArrowUpRight, PiggyBank, Search, Filter, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowDownRight, ArrowUpRight, PiggyBank, Search, Filter, Loader2, Pencil, Trash2, Download } from "lucide-react";
+import { downloadStyledExcel } from "@/lib/excel-export";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useUserPreferences } from "@/contexts/user-preferences";
 
 type TransactionType = "income" | "expense" | "savings";
 
@@ -50,6 +52,7 @@ const EMPTY_FORM = {
 export default function Transactions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isModuleEnabled } = useUserPreferences();
   const search = useSearch();
   const [, navigate] = useLocation();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -66,6 +69,35 @@ export default function Transactions() {
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
   const { data: cards } = useQuery({ queryKey: ["credit-cards"], queryFn: getCreditCards });
   const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both") ?? [];
+
+  const TYPE_LABELS: Record<string, string> = { income: "Receita", expense: "Despesa", savings: "Poupança" };
+  const STATUS_LABELS: Record<string, string> = { paid: "Paga", pending: "Pendente" };
+
+  async function handleExportExcel() {
+    const rows = (transactions ?? []).map((tx) => ({
+      date: tx.date,
+      type: TYPE_LABELS[tx.type] ?? tx.type,
+      description: tx.description ?? "",
+      category: (tx as any).categories?.name ?? "",
+      card: (tx as any).credit_cards?.name ?? "",
+      status: STATUS_LABELS[tx.status] ?? tx.status,
+      amount: Number(tx.amount),
+    }));
+    await downloadStyledExcel(
+      `transacoes-${month}.xlsx`,
+      "Transações",
+      [
+        { header: "Data", key: "date", width: 14 },
+        { header: "Tipo", key: "type", width: 14 },
+        { header: "Descrição", key: "description", width: 32 },
+        { header: "Categoria", key: "category", width: 20 },
+        { header: "Cartão", key: "card", width: 18 },
+        { header: "Estado", key: "status", width: 12 },
+        { header: "Valor (€)", key: "amount", width: 14, numFmt: "#,##0.00" },
+      ],
+      rows
+    );
+  }
 
   function openCreate() {
     setEditingId(null);
@@ -147,9 +179,16 @@ export default function Transactions() {
           <h2 className="text-2xl font-bold tracking-tight">Transações</h2>
           <p className="text-muted-foreground">Gere as tuas receitas e despesas.</p>
         </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {isModuleEnabled("export") && (
+            <Button variant="outline" className="flex-1 sm:flex-none" onClick={handleExportExcel} disabled={!transactions?.length}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar Excel
+            </Button>
+          )}
         <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) setEditingId(null); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto" onClick={openCreate}>
+            <Button className="flex-1 sm:flex-none" onClick={openCreate}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Transação
             </Button>
@@ -244,6 +283,7 @@ export default function Transactions() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
