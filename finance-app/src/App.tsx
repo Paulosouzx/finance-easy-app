@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,7 +10,7 @@ import { Layout } from "@/components/layout";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import Login from "@/pages/login";
-import { PiggyBank } from "lucide-react";
+import { PigLoader } from "@/components/pig-loader";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
@@ -28,18 +28,35 @@ const queryClient = new QueryClient();
 
 function FullScreenSpinner() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-primary">
-      <PiggyBank className="w-24 h-24 text-primary-foreground" strokeWidth={1.5} />
+    <div className="min-h-screen w-full flex items-center justify-center">
+      <PigLoader className="w-24 h-24" />
     </div>
   );
 }
 
 function AuthenticatedRouter() {
   useRealtimeSync();
+  const [location] = useLocation();
+  const previousLocation = useRef(location);
+  const [showHomeTransition, setShowHomeTransition] = useState(false);
+
+  useEffect(() => {
+    if (location === "/" && previousLocation.current === "/settings") {
+      setShowHomeTransition(true);
+      const timer = setTimeout(() => setShowHomeTransition(false), 600);
+      previousLocation.current = location;
+      return () => clearTimeout(timer);
+    }
+    previousLocation.current = location;
+    return undefined;
+  }, [location]);
+
+  if (showHomeTransition) return <FullScreenSpinner />;
+
   return (
     <>
       <Layout>
-        <Suspense fallback={<FullScreenSpinner />}>
+        <Suspense fallback={null}>
           <Switch>
             <Route path="/" component={Dashboard} />
             <Route path="/transactions" component={Transactions} />
