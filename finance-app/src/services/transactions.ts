@@ -7,7 +7,7 @@ type TransactionUpdate = Database["public"]["Tables"]["transactions"]["Update"];
 
 export type TransactionFilters = {
   accountId?: string;
-  type?: "income" | "expense";
+  type?: "income" | "expense" | "savings";
   status?: "paid" | "pending";
   month?: string;
   categoryId?: string;
@@ -33,6 +33,16 @@ export async function getTransactions(filters: TransactionFilters = {}): Promise
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getTransactionById(id: string): Promise<Transaction | null> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*, categories(name, icon, color, type), credit_cards(name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 export async function createTransaction(input: Omit<TransactionInsert, "created_by">): Promise<Transaction> {

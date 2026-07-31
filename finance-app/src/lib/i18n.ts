@@ -33,7 +33,7 @@ const dictionaries = {
     "settings.profile.title": "Perfil",
     "settings.profile.subtitle": "As tuas informações pessoais.",
     "settings.profile.signOut": "Terminar sessão",
-    "settings.profile.freePlan": "Plano Gratuito",
+    "settings.profile.freePlan": "Plano Premium",
     "settings.appearance.title": "Aparência",
     "settings.appearance.subtitle": "Escolhe o tema visual da aplicação. A alteração é imediata.",
     "settings.language.title": "Idioma",

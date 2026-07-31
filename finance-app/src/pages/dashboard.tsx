@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { getAccounts } from "@/services/accounts";
 import { getTransactions } from "@/services/transactions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowDownRight, ArrowUpRight, Scale, Wallet, AreaChart as AreaChartIcon, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, PiggyBank, Scale, Wallet, AreaChart as AreaChartIcon, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import {
   ResponsiveContainer,
@@ -34,6 +35,7 @@ const CHART_TYPE_OPTIONS: { value: ChartType; label: string; icon: typeof AreaCh
 const EMERGENCY_FUND_COLOR = "#9B5FFA";
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const [chartType, setChartType] = useState<ChartType>("area");
   const { data: accounts, isLoading: isLoadingAccounts } = useQuery({
     queryKey: ["accounts"],
@@ -99,7 +101,7 @@ export default function Dashboard() {
         .filter((t) => t.date.startsWith(monthKey) && t.type === "expense")
         .reduce((sum, t) => sum + Number(t.amount), 0);
       const emergencyFund = transactions
-        .filter((t) => t.date.startsWith(monthKey) && (t as any).categories?.type === "savings")
+        .filter((t) => t.date.startsWith(monthKey) && (t.type === "savings" || (t as any).categories?.type === "savings"))
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
       return { label: format(monthDate, "MMM"), income, expenses, emergencyFund };
@@ -237,7 +239,7 @@ export default function Dashboard() {
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                      itemStyle={{ color: "hsl(var(--foreground))" }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
                       formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
                     />
                     {chartType === "area" && [
@@ -348,18 +350,22 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-4">
               {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between gap-3 group hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors cursor-pointer">
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between gap-3 group hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => navigate(`/transactions?edit=${tx.id}`)}
+                >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
-                      {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : tx.type === "savings" ? "bg-[#9B5FFA]/10 text-[#9B5FFA]" : "bg-rose-500/10 text-rose-500"}`}>
+                      {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : tx.type === "savings" ? <PiggyBank className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-sm leading-none truncate">{tx.description || (tx as any).categories?.name || "Transação"}</p>
+                      <p className="font-medium text-sm leading-none truncate">{tx.description || (tx as any).categories?.name || (tx.type === "savings" ? "Fundo de Emergência" : "Transação")}</p>
                       <p className="text-xs text-muted-foreground mt-1.5">{format(new Date(tx.date), "dd MMM yyyy")}</p>
                     </div>
                   </div>
-                  <div className={`font-semibold text-sm shrink-0 ${tx.type === "income" ? "text-emerald-500" : ""}`}>
-                    {tx.type === "income" ? "+" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
+                  <div className={`font-semibold text-sm shrink-0 ${tx.type === "income" ? "text-emerald-500" : tx.type === "savings" ? "text-[#9B5FFA]" : ""}`}>
+                    {tx.type === "income" ? "+" : tx.type === "savings" ? "" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
                   </div>
                 </div>
               ))}

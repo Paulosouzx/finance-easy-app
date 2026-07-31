@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from "@/services/transactions";
+import { getTransactions, getTransactionById, createTransaction, updateTransaction, deleteTransaction } from "@/services/transactions";
 import { getAccounts } from "@/services/accounts";
 import { getCategories } from "@/services/categories";
 import { getCreditCards } from "@/services/creditCards";
 import { format } from "date-fns";
-import { Plus, ArrowDownRight, ArrowUpRight, Search, Filter, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowDownRight, ArrowUpRight, PiggyBank, Search, Filter, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +35,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
+type TransactionType = "income" | "expense" | "savings";
+
 const EMPTY_FORM = {
-  type: "expense" as "income" | "expense",
+  type: "expense" as TransactionType,
   description: "",
   amount: "",
   date: format(new Date(), "yyyy-MM-dd"),
@@ -47,6 +50,8 @@ const EMPTY_FORM = {
 export default function Transactions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const search = useSearch();
+  const [, navigate] = useLocation();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -60,7 +65,7 @@ export default function Transactions() {
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: getAccounts });
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
   const { data: cards } = useQuery({ queryKey: ["credit-cards"], queryFn: getCreditCards });
-  const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both" || c.type === "savings") ?? [];
+  const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both") ?? [];
 
   function openCreate() {
     setEditingId(null);
@@ -68,10 +73,10 @@ export default function Transactions() {
     setModalOpen(true);
   }
 
-  function openEdit(tx: NonNullable<typeof transactions>[number]) {
+  function openEdit(tx: { id: string; type: string; description: string | null; amount: number; date: string; category_id: string | null; account_id: string; card_id: string | null }) {
     setEditingId(tx.id);
     setForm({
-      type: tx.type as "income" | "expense",
+      type: tx.type as TransactionType,
       description: tx.description ?? "",
       amount: String(tx.amount ?? ""),
       date: tx.date,
@@ -81,6 +86,18 @@ export default function Transactions() {
     });
     setModalOpen(true);
   }
+
+  const editParamId = new URLSearchParams(search).get("edit");
+  useEffect(() => {
+    if (!editParamId) return;
+    getTransactionById(editParamId).then((tx) => {
+      if (!tx) return;
+      setMonth(tx.date.slice(0, 7));
+      openEdit(tx);
+    });
+    navigate("/transactions", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParamId]);
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -149,7 +166,7 @@ export default function Transactions() {
                 saveMutation.mutate();
               }}
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant={form.type === "expense" ? "default" : "outline"}
@@ -163,6 +180,14 @@ export default function Transactions() {
                   onClick={() => setForm(f => ({ ...f, type: "income", category_id: "" }))}
                 >
                   Receita
+                </Button>
+                <Button
+                  type="button"
+                  variant={form.type === "savings" ? "default" : "outline"}
+                  onClick={() => setForm(f => ({ ...f, type: "savings", category_id: "" }))}
+                  className={form.type === "savings" ? "bg-[#9B5FFA] hover:bg-[#9B5FFA]/90 text-white" : ""}
+                >
+                  Fundo
                 </Button>
               </div>
               <div className="space-y-1.5">
@@ -179,15 +204,17 @@ export default function Transactions() {
                   <Input id="tx-date" type="date" required value={form.date} onChange={(e) => setForm(f => ({ ...f, date: e.target.value }))} />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Categoria</Label>
-                <Select value={form.category_id} onValueChange={(v) => setForm(f => ({ ...f, category_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {form.type !== "savings" && (
+                <div className="space-y-1.5">
+                  <Label>Categoria</Label>
+                  <Select value={form.category_id} onValueChange={(v) => setForm(f => ({ ...f, category_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                    <SelectContent>
+                      {filteredCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Conta</Label>
                 <Select value={form.account_id} onValueChange={(v) => setForm(f => ({ ...f, account_id: v }))}>
@@ -263,11 +290,11 @@ export default function Transactions() {
                   onClick={() => openEdit(tx)}
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
-                      {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.type === "income" ? "bg-emerald-500/10 text-emerald-500" : tx.type === "savings" ? "bg-[#9B5FFA]/10 text-[#9B5FFA]" : "bg-rose-500/10 text-rose-500"}`}>
+                      {tx.type === "income" ? <ArrowUpRight className="w-5 h-5" /> : tx.type === "savings" ? <PiggyBank className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium truncate">{tx.description || (tx as any).categories?.name || "Transação"}</p>
+                      <p className="font-medium truncate">{tx.description || (tx as any).categories?.name || (tx.type === "savings" ? "Fundo de Emergência" : "Transação")}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-xs text-muted-foreground">{format(new Date(tx.date), "dd MMM yyyy")}</span>
                         {(tx as any).credit_cards?.name && (
@@ -284,8 +311,8 @@ export default function Transactions() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <div className="text-right mr-1">
-                      <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : ""}`}>
-                        {tx.type === "income" ? "+" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
+                      <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : tx.type === "savings" ? "text-[#9B5FFA]" : ""}`}>
+                        {tx.type === "income" ? "+" : tx.type === "savings" ? "" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
                       </div>
                     </div>
                     <Button

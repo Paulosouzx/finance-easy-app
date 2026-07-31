@@ -55,6 +55,23 @@ const CHART_TYPE_OPTIONS: { value: BudgetChartType; label: string; icon: typeof 
 
 const STATUS_COLOR = { exceeded: "#f43f5e", warning: "#f59e0b", ok: "#10b981" } as const;
 
+function BudgetBarTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border bg-card px-3 py-2 shadow-md">
+      <p className="text-sm font-medium mb-1">{label}</p>
+      {payload.map((entry: any) => {
+        const color = entry.dataKey === "gasto" ? STATUS_COLOR[entry.payload.status as keyof typeof STATUS_COLOR] : "hsl(var(--muted-foreground))";
+        return (
+          <p key={entry.dataKey} className="text-sm" style={{ color }}>
+            {entry.name}: €{Number(entry.value).toFixed(2)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Budgets() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -223,11 +240,7 @@ export default function Budgets() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} interval={0} angle={chartData.length > 4 ? -20 : 0} textAnchor={chartData.length > 4 ? "end" : "middle"} height={chartData.length > 4 ? 50 : 30} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(value) => `€${value}`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                      itemStyle={{ color: "hsl(var(--foreground))" }}
-                      formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
-                    />
+                    <Tooltip content={<BudgetBarTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey="gasto" name="Gasto" radius={[4, 4, 0, 0]}>
                       {chartData.map((entry, index) => (
@@ -245,7 +258,7 @@ export default function Budgets() {
                     </Pie>
                     <Tooltip
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                      itemStyle={{ color: "hsl(var(--foreground))" }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
                       formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />

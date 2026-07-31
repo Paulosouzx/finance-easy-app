@@ -10,6 +10,17 @@ const DEFAULT_MODULES = [
   "credit-cards", "bills", "budgets", "goals", "categories", "reports"
 ];
 
+function buildFaviconDataUri(primary: string) {
+  const svg = `<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">` +
+    `<rect width="512" height="512" rx="112" fill="${primary}"/>` +
+    `<g transform="translate(96,96) scale(13.333)" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">` +
+    `<path d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z"/>` +
+    `<path d="M16 10h.01"/>` +
+    `<path d="M2 8v1a2 2 0 0 0 2 2h1"/>` +
+    `</g></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 function applyThemeToDOM(theme: AppTheme) {
   const html = document.documentElement;
   html.setAttribute("data-theme", theme);
@@ -18,11 +29,14 @@ function applyThemeToDOM(theme: AppTheme) {
   } else {
     html.classList.remove("dark");
   }
-  const themeColorMeta = document.getElementById("theme-color-meta");
   const option = THEME_OPTIONS.find((o) => o.key === theme);
-  if (themeColorMeta && option) {
-    themeColorMeta.setAttribute("content", option.bg);
-  }
+  if (!option) return;
+
+  const themeColorMeta = document.getElementById("theme-color-meta");
+  if (themeColorMeta) themeColorMeta.setAttribute("content", option.bg);
+
+  const faviconLink = document.getElementById("favicon-link") as HTMLLinkElement | null;
+  if (faviconLink) faviconLink.href = buildFaviconDataUri(option.primary);
 }
 
 type UserPreferencesContextType = {
