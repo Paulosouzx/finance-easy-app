@@ -10,6 +10,19 @@
     <meta property="og:description" content="Gestão financeira pessoal — controla receitas, despesas, cartões e metas." />
     <meta property="og:type" content="website" />
 
+    <!-- Apply the saved theme before first paint, so the loading spinner never
+         flashes the default light-theme color before switching to the real one. -->
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("finance-theme") || "dark";
+          var html = document.documentElement;
+          html.setAttribute("data-theme", theme);
+          if (theme === "dark" || theme === "green-dark") html.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" id="theme-color-meta" content="#9B5FFA" />
