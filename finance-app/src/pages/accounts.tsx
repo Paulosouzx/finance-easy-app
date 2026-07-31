@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount, updateAccount, deleteAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
-import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2 } from "lucide-react";
+import { getTransactions } from "@/services/transactions";
+import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,6 +67,19 @@ export default function Accounts() {
     queryFn: getAccounts,
     enabled: !!user,
   });
+
+  const { data: transactions } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => getTransactions(),
+    enabled: !!user,
+  });
+
+  const emergencyFundTotal = useMemo(() => {
+    if (!transactions) return 0;
+    return transactions
+      .filter((t) => t.type === "savings" || (t as any).categories?.type === "savings")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+  }, [transactions]);
 
   function openCreate() {
     setEditingId(null);
@@ -190,6 +204,12 @@ export default function Accounts() {
             <h3 className="text-3xl font-bold mt-1.5">
               {isLoading ? <Skeleton className="h-9 w-32 bg-primary-foreground/20" /> : `€${totalBalance.toFixed(2)}`}
             </h3>
+            {emergencyFundTotal > 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-primary-foreground/70 mt-2">
+                <PiggyBank className="w-3.5 h-3.5" />
+                Fundo de Emergência: €{emergencyFundTotal.toFixed(2)}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

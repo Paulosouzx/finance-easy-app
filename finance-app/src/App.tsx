@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,20 +9,20 @@ import { PwaInstallProvider } from "@/contexts/pwa-install";
 import { Layout } from "@/components/layout";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
-
-import Dashboard from "@/pages/dashboard";
-import Transactions from "@/pages/transactions";
-import Accounts from "@/pages/accounts";
-import Bills from "@/pages/bills";
-import CreditCards from "@/pages/credit-cards";
-import Budgets from "@/pages/budgets";
-import Goals from "@/pages/goals";
-import Categories from "@/pages/categories";
-import Reports from "@/pages/reports";
-import Settings from "@/pages/settings";
 import { PiggyBank } from "lucide-react";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Transactions = lazy(() => import("@/pages/transactions"));
+const Accounts = lazy(() => import("@/pages/accounts"));
+const Bills = lazy(() => import("@/pages/bills"));
+const CreditCards = lazy(() => import("@/pages/credit-cards"));
+const Budgets = lazy(() => import("@/pages/budgets"));
+const Goals = lazy(() => import("@/pages/goals"));
+const Categories = lazy(() => import("@/pages/categories"));
+const Reports = lazy(() => import("@/pages/reports"));
+const Settings = lazy(() => import("@/pages/settings"));
 
 const queryClient = new QueryClient();
 
@@ -39,21 +39,23 @@ function AuthenticatedRouter() {
   return (
     <>
       <Layout>
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/transactions" component={Transactions} />
-          <Route path="/accounts" component={Accounts} />
-          <Route path="/credit-cards" component={CreditCards} />
-          <Route path="/bills" component={Bills} />
-          <Route path="/budgets" component={Budgets} />
-          <Route path="/goals" component={Goals} />
-          <Route path="/categories" component={Categories} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/login">{() => <Redirect to="/" />}</Route>
-          <Route path="/auth/callback">{() => <Redirect to="/" />}</Route>
-          <Route component={NotFound} />
-        </Switch>
+        <Suspense fallback={<FullScreenSpinner />}>
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/transactions" component={Transactions} />
+            <Route path="/accounts" component={Accounts} />
+            <Route path="/credit-cards" component={CreditCards} />
+            <Route path="/bills" component={Bills} />
+            <Route path="/budgets" component={Budgets} />
+            <Route path="/goals" component={Goals} />
+            <Route path="/categories" component={Categories} />
+            <Route path="/reports" component={Reports} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/login">{() => <Redirect to="/" />}</Route>
+            <Route path="/auth/callback">{() => <Redirect to="/" />}</Route>
+            <Route component={NotFound} />
+          </Switch>
+        </Suspense>
       </Layout>
       <PwaInstallPrompt />
     </>
