@@ -1,4 +1,4 @@
-const CACHE_NAME = "financeapp-v4";
+const CACHE_NAME = "financeapp-v5";
 
 const STATIC_PRECACHE = [
   "/",

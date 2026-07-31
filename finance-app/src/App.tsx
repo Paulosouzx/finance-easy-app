@@ -29,7 +29,7 @@ const queryClient = new QueryClient();
 function FullScreenSpinner() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-primary">
-      <PiggyBank className="w-16 h-16 text-primary-foreground" strokeWidth={1.5} />
+      <PiggyBank className="w-24 h-24 text-primary-foreground" strokeWidth={1.5} />
     </div>
   );
 }
