@@ -5,8 +5,8 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#7B2FF7",
-  "theme_color": "#7B2FF7",
+  "background_color": "#9B5FFA",
+  "theme_color": "#9B5FFA",
   "categories": ["finance", "productivity"],
   "lang": "pt-PT",
   "icons": [
