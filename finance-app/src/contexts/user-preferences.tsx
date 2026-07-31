@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProfile, updateProfile, type AppTheme, type AppLanguage } from "@/services/profile";
+import { THEME_OPTIONS } from "@/lib/theme-options";
 
 export type { AppTheme, AppLanguage };
 
@@ -16,6 +17,11 @@ function applyThemeToDOM(theme: AppTheme) {
     html.classList.add("dark");
   } else {
     html.classList.remove("dark");
+  }
+  const themeColorMeta = document.getElementById("theme-color-meta");
+  const option = THEME_OPTIONS.find((o) => o.key === theme);
+  if (themeColorMeta && option) {
+    themeColorMeta.setAttribute("content", option.bg);
   }
 }
 

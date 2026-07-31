@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/lib/i18n";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2 } from "lucide-react";
+import { Loader2, PiggyBank } from "lucide-react";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export default function Login() {
@@ -78,8 +78,8 @@ export default function Login() {
       </div>
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center overflow-hidden">
-            <img src="/favicon.svg" alt="" className="w-full h-full" />
+          <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
+            <PiggyBank className="w-7 h-7" strokeWidth={1.5} />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-primary">Finance Easy</h1>
           <p className="text-sm text-muted-foreground">{t("auth.appTagline")}</p>

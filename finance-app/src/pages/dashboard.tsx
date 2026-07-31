@@ -5,7 +5,7 @@ import { getTransactions } from "@/services/transactions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowDownRight, ArrowUpRight, CreditCard, Wallet, AreaChart as AreaChartIcon, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Scale, Wallet, AreaChart as AreaChartIcon, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import {
   ResponsiveContainer,
@@ -31,7 +31,7 @@ const CHART_TYPE_OPTIONS: { value: ChartType; label: string; icon: typeof AreaCh
   { value: "bar", label: "Barras", icon: BarChart3 },
 ];
 
-const EMERGENCY_FUND_COLOR = "#F59E0B";
+const EMERGENCY_FUND_COLOR = "#9B5FFA";
 
 export default function Dashboard() {
   const [chartType, setChartType] = useState<ChartType>("area");
@@ -70,13 +70,17 @@ export default function Dashboard() {
     const pctChange = (current: number, previous: number) =>
       previous === 0 ? 0 : Math.round(((current - previous) / previous) * 100);
 
+    const monthlyNet = monthlyIncome - monthlyExpenses;
+    const lastMonthNet = lastMonthIncome - lastMonthExpenses;
+
     return {
       totalBalance,
       monthlyIncome,
       monthlyIncomeChange: pctChange(monthlyIncome, lastMonthIncome),
       monthlyExpenses,
       monthlyExpensesChange: pctChange(monthlyExpenses, lastMonthExpenses),
-      openCardInvoices: transactions.filter((t) => t.card_id && t.status === "pending").length,
+      monthlyNet,
+      monthlyNetChange: pctChange(monthlyNet, lastMonthNet),
     };
   }, [accounts, transactions]);
 
@@ -162,11 +166,12 @@ export default function Dashboard() {
           trend="down"
         />
         <SummaryCard
-          title="Faturas em Aberto"
-          value={summary?.openCardInvoices}
-          icon={CreditCard}
+          title="Saldo do Mês"
+          value={summary?.monthlyNet}
+          change={summary?.monthlyNetChange}
+          icon={Scale}
           isLoading={isLoadingSummary}
-          isCurrency={false}
+          trend="up"
         />
       </div>
 
@@ -235,26 +240,21 @@ export default function Dashboard() {
                       itemStyle={{ color: "hsl(var(--foreground))" }}
                       formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
                     />
-                    {chartType === "area" && (
-                      <>
-                        <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Receitas" />
-                        <Area type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Despesas" />
-                      </>
-                    )}
-                    {chartType === "line" && (
-                      <>
-                        <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={false} name="Receitas" />
-                        <Line type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Despesas" />
-                      </>
-                    )}
-                    {chartType === "bar" && (
-                      <>
-                        <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Receitas" />
-                        <Bar dataKey="expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Despesas" />
-                      </>
-                    )}
+                    {chartType === "area" && [
+                      <Area key="income" type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" name="Receitas" />,
+                      <Area key="expenses" type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" name="Despesas" />,
+                    ]}
+                    {chartType === "line" && [
+                      <Line key="income" type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={false} name="Receitas" />,
+                      <Line key="expenses" type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Despesas" />,
+                    ]}
+                    {chartType === "bar" && [
+                      <Bar key="income" dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Receitas" />,
+                      <Bar key="expenses" dataKey="expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} name="Despesas" />,
+                    ]}
                     {hasEmergencyFundData && (
                       <Line
+                        key="emergencyFund"
                         type="monotone"
                         dataKey="emergencyFund"
                         stroke={EMERGENCY_FUND_COLOR}
@@ -284,8 +284,8 @@ export default function Dashboard() {
                 Sem dados disponíveis
               </div>
             ) : (
-              <div className="h-[260px] w-full flex flex-col items-center">
-                <div className="h-[220px] w-full">
+              <div className="w-full flex flex-col items-center pb-1">
+                <div className="h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -309,7 +309,7 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="w-full mt-2 space-y-2 max-h-[80px] overflow-y-auto pr-2">
+                <div className="w-full mt-4 space-y-2 max-h-[80px] overflow-y-auto pr-2">
                   {expensesByCategory.slice(0, 4).map((exp) => (
                     <div key={exp.categoryId} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
@@ -386,8 +386,8 @@ function SummaryCard({ title, value, change, icon: Icon, isLoading, isCurrency =
             <Skeleton className="h-7 w-24" />
           ) : (
             <h3 className="text-xl font-bold tracking-tight">
-              {isCurrency ? "€" : ""}
-              {value?.toLocaleString(undefined, { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 }) || "0.00"}
+              {isCurrency && (value ?? 0) < 0 ? "-€" : isCurrency ? "€" : ""}
+              {Math.abs(value ?? 0).toLocaleString(undefined, { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 })}
             </h3>
           )}
         </div>
