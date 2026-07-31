@@ -31,6 +31,7 @@ const MODULE_OPTIONS: ModuleOption[] = [
   { key: "goals", label: "Metas", description: "Objetivos de poupança" },
   { key: "categories", label: "Categorias", description: "Organização de transações" },
   { key: "reports", label: "Relatórios", description: "Gráficos e análises detalhadas" },
+  { key: "export", label: "Exportar Transações", description: "Botão para exportar transações em Excel" },
 ];
 
 function ThemeSwatch({ option, selected, onSelect }: { option: ThemeOption; selected: boolean; onSelect: () => void }) {
