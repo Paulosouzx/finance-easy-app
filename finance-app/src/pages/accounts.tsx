@@ -332,7 +332,7 @@ export default function Accounts() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar conta?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação é permanente. As transações associadas a esta conta não serão eliminadas.</AlertDialogDescription>
+            <AlertDialogDescription>Esta ação é permanente. Todas as transações associadas a esta conta também serão eliminadas.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
