@@ -106,9 +106,9 @@ export default function Reports() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader><CardTitle>Fluxo de Caixa</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             {isLoading ? <Skeleton className="h-[250px] w-full" /> : (
               <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -131,28 +131,30 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader><CardTitle>Despesas por Categoria</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             {isLoading ? <Skeleton className="h-[250px] w-full" /> : expensesByCategory.length === 0 ? (
               <div className="h-[250px] flex items-center justify-center text-muted-foreground">Sem dados de despesas disponíveis.</div>
             ) : (
-              <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={expensesByCategory} dataKey="amount" cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} stroke="none">
-                      {expensesByCategory.map((entry, i) => (
-                        <Cell key={i} fill={entry.color || `hsl(var(--chart-${(i % 5) + 1}))`} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => [formatCurrency(v, currency), undefined]} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1.5 mt-2 max-h-[60px] overflow-y-auto">
-                  {expensesByCategory.slice(0, 4).map((e, i) => (
+              <div className="h-full flex flex-col">
+                <div className="h-[160px] shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={expensesByCategory} dataKey="amount" cx="50%" cy="50%" innerRadius={50} outerRadius={72} paddingAngle={4} stroke="none">
+                        {expensesByCategory.map((entry, i) => (
+                          <Cell key={i} fill={entry.color || `hsl(var(--chart-${(i % 5) + 1}))`} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => [formatCurrency(v, currency), undefined]} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 min-h-0 space-y-1.5 mt-2 overflow-y-auto pr-1">
+                  {expensesByCategory.map((e, i) => (
                     <div key={i} className="flex items-center justify-between text-xs min-w-0">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color || "hsl(var(--primary))" }} />
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: e.color || "hsl(var(--primary))" }} />
                         <span className="truncate">{e.name}</span>
                       </div>
                       <span className="font-medium shrink-0">{formatCurrency(e.amount, currency)}</span>
