@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount, updateAccount, deleteAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getTransactions } from "@/services/transactions";
-import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2, PiggyBank } from "lucide-react";
+import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2, TrendingUp } from "lucide-react";
+import { formatCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
+import { computeAccountBalance, computeTotalBalance } from "@/lib/account-balance";
+import { getAccountColor, ACCOUNT_COLOR_PALETTE } from "@/lib/account-colors";
+import { useUserPreferences } from "@/contexts/user-preferences";
+import { cn, capitalizeFirst } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,11 +62,12 @@ export default function Accounts() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { currency: displayCurrency } = useUserPreferences();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [shareAccountId, setShareAccountId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR" });
+  const [form, setForm] = useState<{ name: string; type: string; institution: string; balance: string; currency: string; color: string | null }>({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR", color: null });
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ["accounts"],
@@ -74,16 +81,10 @@ export default function Accounts() {
     enabled: !!user,
   });
 
-  const emergencyFundTotal = useMemo(() => {
-    if (!transactions) return 0;
-    return transactions
-      .filter((t) => t.type === "savings" || (t as any).categories?.type === "savings")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-  }, [transactions]);
 
   function openCreate() {
     setEditingId(null);
-    setForm({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR" });
+    setForm({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR", color: null });
     setModalOpen(true);
   }
 
@@ -95,6 +96,7 @@ export default function Accounts() {
       institution: account.institution ?? "",
       balance: String(account.balance ?? "0"),
       currency: account.currency ?? "EUR",
+      color: account.color ?? null,
     });
     setModalOpen(true);
   }
@@ -102,12 +104,12 @@ export default function Accounts() {
   const saveMutation = useMutation({
     mutationFn: () => {
       const payload = {
-        name: form.name,
+        name: capitalizeFirst(form.name),
         type: form.type,
         institution: form.institution || null,
         balance: Number(form.balance) || 0,
         currency: form.currency,
-        color: null,
+        color: form.color,
       };
       if (editingId) return updateAccount(editingId, payload);
       return createAccount(payload);
@@ -116,7 +118,7 @@ export default function Accounts() {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setModalOpen(false);
       setEditingId(null);
-      setForm({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR" });
+      setForm({ name: "", type: "checking", institution: "", balance: "0", currency: "EUR", color: null });
     },
     onError: (err) => {
       toast({ title: "Não foi possível guardar a conta", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
@@ -134,7 +136,11 @@ export default function Accounts() {
     },
   });
 
-  const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
+  // Contas de investimento são acompanhadas à parte (não fazem parte do saldo "líquido" do dia a dia).
+  const nonInvestmentAccounts = (accounts ?? []).filter(a => a.type !== "investment");
+  const investmentAccounts = (accounts ?? []).filter(a => a.type === "investment");
+  const totalBalance = computeTotalBalance(nonInvestmentAccounts, transactions ?? []);
+  const totalInvested = computeTotalBalance(investmentAccounts, transactions ?? []);
   const shareAccount = accounts?.find(a => a.id === shareAccountId);
 
   return (
@@ -179,12 +185,35 @@ export default function Accounts() {
                 </Select>
               </div>
               <div className="space-y-1.5">
+                <Label>Moeda</Label>
+                <Select value={form.currency} onValueChange={(v) => setForm(f => ({ ...f, currency: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_OPTIONS.map(c => <SelectItem key={c.code} value={c.code}>{c.label} ({c.symbol})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="account-institution">Instituição (opcional)</Label>
                 <Input id="account-institution" value={form.institution} onChange={(e) => setForm(f => ({ ...f, institution: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="account-balance">Saldo inicial</Label>
                 <Input id="account-balance" type="number" step="0.01" value={form.balance} onChange={(e) => setForm(f => ({ ...f, balance: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Cor</Label>
+                <div className="flex flex-wrap gap-2 p-3 bg-secondary/50 rounded-lg">
+                  {ACCOUNT_COLOR_PALETTE.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, color }))}
+                      className={cn("w-7 h-7 rounded-full transition-all border-2", form.color === color ? "border-foreground scale-110 shadow" : "border-transparent hover:scale-105")}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={saveMutation.isPending}>
@@ -202,12 +231,12 @@ export default function Accounts() {
           <div>
             <p className="text-primary-foreground/80 font-medium text-sm">Saldo Total</p>
             <h3 className="text-3xl font-bold mt-1.5">
-              {isLoading ? <Skeleton className="h-9 w-32 bg-primary-foreground/20" /> : `€${totalBalance.toFixed(2)}`}
+              {isLoading ? <Skeleton className="h-9 w-32 bg-primary-foreground/20" /> : formatCurrency(totalBalance, displayCurrency)}
             </h3>
-            {emergencyFundTotal > 0 && (
+            {investmentAccounts.length > 0 && (
               <p className="flex items-center gap-1.5 text-xs text-primary-foreground/70 mt-2">
-                <PiggyBank className="w-3.5 h-3.5" />
-                Fundo de Emergência: €{emergencyFundTotal.toFixed(2)}
+                <TrendingUp className="w-3.5 h-3.5" />
+                Saldo Total Investido: {formatCurrency(totalInvested, displayCurrency)}
               </p>
             )}
           </div>
@@ -230,21 +259,23 @@ export default function Accounts() {
             </Card>
           ))
         ) : accounts?.length === 0 ? (
-          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
+          <div className="col-span-full flex flex-col items-center p-10 text-center text-muted-foreground bg-muted/20 border border-dashed rounded-xl">
+            <EmptyStateIllustration />
             Nenhuma conta encontrada. Cria uma para começar.
           </div>
         ) : (
           accounts?.map((account) => {
             const Icon = getAccountIcon(account.type ?? "");
             const isOwner = account.owner_id === user?.id;
+            const accountColor = getAccountColor(account);
             return (
-              <Card key={account.id} className="hover:border-primary/50 transition-colors group">
+              <Card key={account.id} className="hover:border-primary/50 transition-colors group" style={{ borderTopColor: accountColor, borderTopWidth: 3 }}>
                 <CardContent className="p-5">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <div
                         className="w-10 h-10 rounded-xl flex items-center justify-center bg-secondary text-secondary-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                        style={{ backgroundColor: account.color ? `${account.color}20` : undefined, color: account.color || undefined }}
+                        style={{ backgroundColor: `${accountColor}20`, color: accountColor }}
                       >
                         <Icon className="w-5 h-5" />
                       </div>
@@ -270,7 +301,7 @@ export default function Accounts() {
                     </div>
                   </div>
                   <div className="flex items-end justify-between">
-                    <h4 className="text-2xl font-bold">€{Number(account.balance).toFixed(2)}</h4>
+                    <h4 className="text-2xl font-bold">{formatCurrency(computeAccountBalance(account, transactions ?? []), displayCurrency)}</h4>
                     {isOwner && (
                       <Button
                         size="sm"

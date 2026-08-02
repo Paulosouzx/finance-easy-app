@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCategories, createCategory, updateCategory, deleteCategory } from "@/services/categories";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import {
   Plus, Pencil, Trash2,
   ShoppingCart, Car, Home, Heart, Zap, Coffee, Utensils, Shirt,
@@ -18,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+import { cn, capitalizeFirst } from "@/lib/utils";
 
 const ICON_OPTIONS = [
   { key: "ShoppingCart", icon: ShoppingCart }, { key: "Car", icon: Car }, { key: "Home", icon: Home },
@@ -118,7 +119,7 @@ export default function Categories() {
     setSaving(true);
     try {
       const payload = {
-        name: form.name.trim(),
+        name: capitalizeFirst(form.name),
         type: form.type,
         icon: form.icon,
         color: form.color,
@@ -170,7 +171,10 @@ export default function Categories() {
                 </div>
               ))
             ) : topLevel.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">Nenhuma categoria encontrada.</div>
+              <div className="flex flex-col items-center p-10 text-center text-muted-foreground">
+                <EmptyStateIllustration />
+                Nenhuma categoria encontrada.
+              </div>
             ) : (
               topLevel.map(cat => {
                 const subs = byParent.get(cat.id) ?? [];

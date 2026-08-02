@@ -139,8 +139,8 @@
   --popover-foreground: 220 20% 92%;
   --popover-border: 237 24% 22%;
 
-  --primary: 263 90% 68%;
-  --primary-foreground: 237 28% 9%;
+  --primary: 263 90% 58%;
+  --primary-foreground: 0 0% 100%;
 
   --secondary: 237 24% 22%;
   --secondary-foreground: 220 20% 92%;
@@ -156,9 +156,9 @@
 
   --border: 237 24% 22%;
   --input: 237 24% 22%;
-  --ring: 263 90% 68%;
+  --ring: 263 90% 58%;
 
-  --chart-1: 263 90% 68%;
+  --chart-1: 263 90% 58%;
   --chart-2: 290 80% 70%;
   --chart-3: 160 84% 50%;
   --chart-4: 330 60% 60%;
@@ -167,11 +167,11 @@
   --sidebar: 237 28% 9%;
   --sidebar-foreground: 220 20% 88%;
   --sidebar-border: 237 24% 22%;
-  --sidebar-primary: 263 90% 68%;
-  --sidebar-primary-foreground: 237 28% 9%;
+  --sidebar-primary: 263 90% 58%;
+  --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 237 24% 22%;
   --sidebar-accent-foreground: 220 20% 88%;
-  --sidebar-ring: 263 90% 68%;
+  --sidebar-ring: 263 90% 58%;
 }
 
 /* ──────────────────────────────────────────────
@@ -300,6 +300,28 @@
   [role="button"][aria-disabled="true"] {
     cursor: not-allowed;
   }
+}
+
+/* Scrollbar com a cor do tema em vez da barra cinzenta padrão do browser. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.5) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--primary) / 0.5);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--primary) / 0.75);
 }
 
 /* Em mobile, evita seleção de texto acidental ao tocar/arrastar na UI,

@@ -26,11 +26,12 @@ export async function createCategory(input: Omit<CategoryInsert, "user_id" | "is
 }
 
 export async function updateCategory(id: string, input: CategoryUpdate): Promise<Category> {
+  // Categorias do sistema também podem ser editadas (nome, ícone, cor, tipo) — apenas
+  // a eliminação continua bloqueada para elas (ver deleteCategory).
   const { data, error } = await supabase
     .from("categories")
     .update(input)
     .eq("id", id)
-    .eq("is_system", false)
     .select()
     .single();
   if (error) throw error;

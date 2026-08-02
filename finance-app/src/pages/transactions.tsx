@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getTransactions, getTransactionById, createTransaction, updateTransaction, deleteTransaction } from "@/services/transactions";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getAccounts } from "@/services/accounts";
 import { getCategories } from "@/services/categories";
 import { getCreditCards } from "@/services/creditCards";
-import { format } from "date-fns";
-import { Plus, ArrowDownRight, ArrowUpRight, PiggyBank, Search, Filter, Loader2, Pencil, Trash2, Download } from "lucide-react";
+import { format, addMonths } from "date-fns";
+import { pt } from "date-fns/locale";
+import { Plus, ArrowDownRight, ArrowUpRight, PiggyBank, Search, Filter, Loader2, Pencil, Trash2, Download, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { downloadStyledExcel } from "@/lib/excel-export";
+import { formatCurrency } from "@/lib/currency";
+import { cn, capitalizeFirst } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +43,81 @@ import { useUserPreferences } from "@/contexts/user-preferences";
 
 type TransactionType = "income" | "expense" | "savings";
 
+const MONTH_CHIPS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function shiftMonth(monthStr: string, delta: number): string {
+  const [y, m] = monthStr.split("-").map(Number);
+  return format(addMonths(new Date(y, m - 1, 1), delta), "yyyy-MM");
+}
+
+function MonthNavigator({ month, onChange }: { month: string; onChange: (month: string) => void }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const selectedYear = Number(month.slice(0, 4));
+  const selectedMonthIdx = Number(month.slice(5, 7)) - 1;
+  const [pickerYear, setPickerYear] = useState(selectedYear);
+
+  const label = format(new Date(selectedYear, selectedMonthIdx, 1), "MMMM yyyy", { locale: pt });
+  const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center gap-1">
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => onChange(shiftMonth(month, -1))}>
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <button
+          type="button"
+          onClick={() => { setPickerYear(selectedYear); setPickerOpen((o) => !o); }}
+          className={cn(
+            "px-4 py-1.5 rounded-full border-2 font-semibold text-sm transition-colors",
+            pickerOpen ? "border-primary bg-primary/10 text-primary" : "border-primary text-primary hover:bg-primary/10"
+          )}
+        >
+          {capitalizedLabel}
+        </button>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => onChange(shiftMonth(month, 1))}>
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {pickerOpen && (
+        <div className="flex flex-col items-center gap-2.5 p-3 rounded-xl border bg-card shadow-sm">
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPickerYear((y) => y - 1)}>
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </Button>
+            <span className="font-semibold text-sm w-12 text-center">{pickerYear}</span>
+            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPickerYear((y) => y + 1)}>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {MONTH_CHIPS.map((name, idx) => {
+              const isSelected = pickerYear === selectedYear && idx === selectedMonthIdx;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => {
+                    onChange(`${pickerYear}-${String(idx + 1).padStart(2, "0")}`);
+                    setPickerOpen(false);
+                  }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                    isSelected ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/70 text-secondary-foreground"
+                  )}
+                >
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const EMPTY_FORM = {
   type: "expense" as TransactionType,
   description: "",
@@ -52,8 +131,8 @@ const EMPTY_FORM = {
 export default function Transactions() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { isModuleEnabled } = useUserPreferences();
-  const search = useSearch();
+  const { isModuleEnabled, currency } = useUserPreferences();
+  const urlSearch = useSearch();
   const [, navigate] = useLocation();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [modalOpen, setModalOpen] = useState(false);
@@ -61,20 +140,58 @@ export default function Transactions() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
+  const [searchText, setSearchText] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterAccountId, setFilterAccountId] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+  const [filterCategoryId, setFilterCategoryId] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+
+  const hasActiveFilters =
+    searchText.trim() !== "" ||
+    filterAccountId !== "all" ||
+    filterType !== "all" ||
+    filterCategoryId !== "all" ||
+    filterStatus !== "all";
+
+  function clearFilters() {
+    setSearchText("");
+    setFilterAccountId("all");
+    setFilterType("all");
+    setFilterCategoryId("all");
+    setFilterStatus("all");
+  }
+
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["transactions", month],
-    queryFn: () => getTransactions({ month }),
+    queryKey: ["transactions", month, filterAccountId, filterType, filterCategoryId, filterStatus],
+    queryFn: () => getTransactions({
+      month,
+      accountId: filterAccountId !== "all" ? filterAccountId : undefined,
+      type: filterType !== "all" ? (filterType as TransactionType) : undefined,
+      categoryId: filterCategoryId !== "all" ? filterCategoryId : undefined,
+      status: filterStatus !== "all" ? (filterStatus as "paid" | "pending") : undefined,
+    }),
   });
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: getAccounts });
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories });
   const { data: cards } = useQuery({ queryKey: ["credit-cards"], queryFn: getCreditCards });
   const filteredCategories = categories?.filter(c => c.type === form.type || c.type === "both") ?? [];
+  const filterCategoryOptions = categories?.filter(c => filterType === "all" || c.type === filterType || c.type === "both") ?? [];
+
+  const displayedTransactions = transactions?.filter((tx) => {
+    if (!searchText.trim()) return true;
+    const q = searchText.trim().toLowerCase();
+    const description = (tx.description ?? "").toLowerCase();
+    const categoryName = ((tx as any).categories?.name ?? "").toLowerCase();
+    return description.includes(q) || categoryName.includes(q);
+  });
 
   const TYPE_LABELS: Record<string, string> = { income: "Receita", expense: "Despesa", savings: "Poupança" };
   const STATUS_LABELS: Record<string, string> = { paid: "Paga", pending: "Pendente" };
 
   async function handleExportExcel() {
-    const rows = (transactions ?? []).map((tx) => ({
+    const rows = (displayedTransactions ?? []).map((tx) => ({
       date: tx.date,
       type: TYPE_LABELS[tx.type] ?? tx.type,
       description: tx.description ?? "",
@@ -119,7 +236,7 @@ export default function Transactions() {
     setModalOpen(true);
   }
 
-  const editParamId = new URLSearchParams(search).get("edit");
+  const editParamId = new URLSearchParams(urlSearch).get("edit");
   useEffect(() => {
     if (!editParamId) return;
     getTransactionById(editParamId).then((tx) => {
@@ -131,6 +248,14 @@ export default function Transactions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editParamId]);
 
+  const isNewParam = new URLSearchParams(urlSearch).get("new") === "1";
+  useEffect(() => {
+    if (!isNewParam) return;
+    openCreate();
+    navigate("/transactions", { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNewParam]);
+
   const saveMutation = useMutation({
     mutationFn: () => {
       if (!form.account_id) throw new Error("Escolhe uma conta");
@@ -140,7 +265,7 @@ export default function Transactions() {
         card_id: form.card_id || null,
         amount: Number(form.amount) || 0,
         type: form.type,
-        description: form.description,
+        description: capitalizeFirst(form.description),
         date: form.date,
       };
       if (editingId) {
@@ -210,6 +335,7 @@ export default function Transactions() {
                   type="button"
                   variant={form.type === "expense" ? "default" : "outline"}
                   onClick={() => setForm(f => ({ ...f, type: "expense", category_id: "" }))}
+                  className={form.type === "expense" ? "bg-rose-500 hover:bg-rose-500/90 text-white" : ""}
                 >
                   Despesa
                 </Button>
@@ -286,28 +412,113 @@ export default function Transactions() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-b gap-4">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <Select value={filterType} onValueChange={(v) => { setFilterType(v); setFilterCategoryId("all"); }}>
+          <SelectTrigger className="w-auto gap-1.5 rounded-full bg-primary text-primary-foreground border-none px-4 h-9 font-semibold hover:bg-primary/90 [&>svg]:text-primary-foreground [&>svg]:opacity-100">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="income">Receitas</SelectItem>
+            <SelectItem value="expense">Despesas</SelectItem>
+            <SelectItem value="savings">Fundo</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center gap-2">
+          <div className={cn("flex items-center overflow-hidden transition-all duration-300 ease-out", searchOpen ? "w-48 sm:w-64" : "w-9")}>
+            {searchOpen ? (
+              <div className="relative w-full">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Pesquisar transações..." className="pl-9 bg-muted/50 border-none" />
+                <Input
+                  autoFocus
+                  placeholder="Pesquisar transações..."
+                  className="pl-9 bg-muted/50 border-none w-full"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onBlur={() => { if (!searchText.trim()) setSearchOpen(false); }}
+                />
               </div>
-              <Button variant="outline" size="icon" className="shrink-0">
+            ) : (
+              <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setSearchOpen(true)}>
+                <Search className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+          <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className={`shrink-0 ${filterAccountId !== "all" || filterCategoryId !== "all" || filterStatus !== "all" ? "border-primary text-primary" : ""}`}
+              >
                 <Filter className="w-4 h-4" />
               </Button>
-            </div>
-            <div className="w-full sm:w-auto">
-              <Input
-                type="month"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-                className="w-full sm:w-40"
-              />
-            </div>
-          </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Filtrar transações</DialogTitle>
+                <DialogDescription>Escolhe os filtros que queres aplicar à lista.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Conta</Label>
+                  <Select value={filterAccountId} onValueChange={setFilterAccountId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as contas</SelectItem>
+                      {accounts?.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Categoria</Label>
+                  <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as categorias</SelectItem>
+                      {filterCategoryOptions.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Estado</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os estados</SelectItem>
+                      <SelectItem value="paid">Paga</SelectItem>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={clearFilters}>Limpar filtros</Button>
+                <Button type="button" onClick={() => setFilterOpen(false)}>Aplicar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={clearFilters}
+              title="Limpar filtros"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </div>
 
+      <MonthNavigator month={month} onChange={setMonth} />
+
+      <Card>
+        <CardContent className="p-0">
           <div className="divide-y">
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
@@ -320,10 +531,13 @@ export default function Transactions() {
                   <Skeleton className="h-4 w-16" />
                 </div>
               ))
-            ) : transactions?.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">Nenhuma transação encontrada para este período.</div>
+            ) : displayedTransactions?.length === 0 ? (
+              <div className="flex flex-col items-center p-10 text-center text-muted-foreground">
+                <EmptyStateIllustration />
+                Nenhuma transação encontrada para este período.
+              </div>
             ) : (
-              transactions?.map((tx) => (
+              displayedTransactions?.map((tx) => (
                 <div
                   key={tx.id}
                   className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
@@ -337,6 +551,18 @@ export default function Transactions() {
                       <p className="font-medium truncate">{tx.description || (tx as any).categories?.name || (tx.type === "savings" ? "Fundo de Emergência" : "Transação")}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-xs text-muted-foreground">{format(new Date(tx.date), "dd MMM yyyy")}</span>
+                        {(tx as any).categories?.name && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] h-4 px-1.5"
+                            style={{
+                              borderColor: (tx as any).categories.color ? `${(tx as any).categories.color}55` : undefined,
+                              color: (tx as any).categories.color || undefined,
+                            }}
+                          >
+                            {(tx as any).categories.name}
+                          </Badge>
+                        )}
                         {(tx as any).credit_cards?.name && (
                           <>
                             <span className="text-xs text-muted-foreground">&bull;</span>
@@ -351,8 +577,8 @@ export default function Transactions() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <div className="text-right mr-1">
-                      <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : tx.type === "savings" ? "text-[#9B5FFA]" : ""}`}>
-                        {tx.type === "income" ? "+" : tx.type === "savings" ? "" : "-"}€{Math.abs(Number(tx.amount)).toFixed(2)}
+                      <div className={`font-semibold ${tx.type === "income" ? "text-emerald-500" : tx.type === "savings" ? "text-[#9B5FFA]" : "text-rose-500"}`}>
+                        {tx.type === "income" ? "+" : tx.type === "savings" ? "" : "-"}{formatCurrency(Math.abs(Number(tx.amount)), currency)}
                       </div>
                     </div>
                     <Button

@@ -4,7 +4,7 @@
   "description": "Gestão financeira pessoal — receitas, despesas, cartões e metas",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#9B5FFA",
   "theme_color": "#9B5FFA",
   "categories": ["finance", "productivity"],

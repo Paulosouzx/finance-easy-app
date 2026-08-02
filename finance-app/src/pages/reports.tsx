@@ -1,29 +1,47 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getTransactions } from "@/services/transactions";
+import { getAccounts } from "@/services/accounts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, subMonths } from "date-fns";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, BarChart, Bar, Legend } from "recharts";
+import { formatCurrency } from "@/lib/currency";
+import { useUserPreferences } from "@/contexts/user-preferences";
+import { AccountTabs } from "@/components/account-tabs";
 
 export default function Reports() {
   const [months] = useState(6);
+  const { currency } = useUserPreferences();
   const { data: transactions, isLoading } = useQuery({ queryKey: ["transactions"], queryFn: () => getTransactions() });
+  const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: getAccounts });
+  const [selectedAccountTab, setSelectedAccountTab] = useState("");
+
+  useEffect(() => {
+    if (!selectedAccountTab && accounts?.length) {
+      setSelectedAccountTab(accounts[0].id);
+    }
+  }, [accounts, selectedAccountTab]);
+
+  const scopedTransactions = useMemo(() => {
+    if (!transactions || !selectedAccountTab) return [];
+    return transactions.filter(t => t.account_id === selectedAccountTab);
+  }, [transactions, selectedAccountTab]);
 
   const evolution = useMemo(() => {
     if (!transactions) return [];
     return Array.from({ length: months }, (_, i) => subMonths(new Date(), months - 1 - i)).map(monthDate => {
       const key = format(monthDate, "yyyy-MM");
-      const income = transactions.filter(t => t.date.startsWith(key) && t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
-      const expenses = transactions.filter(t => t.date.startsWith(key) && t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+      const income = scopedTransactions.filter(t => t.date.startsWith(key) && t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+      const expenses = scopedTransactions.filter(t => t.date.startsWith(key) && t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
       return { label: format(monthDate, "MMM yy"), income, expenses, balance: income - expenses };
     });
-  }, [transactions, months]);
+  }, [scopedTransactions, months]);
 
   const expensesByCategory = useMemo(() => {
     if (!transactions) return [];
     const grouped = new Map<string, { name: string; color: string | null; amount: number }>();
-    transactions.filter(t => t.type === "expense").forEach(t => {
+    scopedTransactions.filter(t => t.type === "expense").forEach(t => {
       const cat = (t as any).categories;
       const key = t.category_id || "uncategorized";
       const existing = grouped.get(key);
@@ -34,7 +52,7 @@ export default function Reports() {
       }
     });
     return Array.from(grouped.values()).sort((a, b) => b.amount - a.amount).slice(0, 8);
-  }, [transactions]);
+  }, [scopedTransactions]);
 
   const totalIncome = evolution.reduce((s, m) => s + m.income, 0);
   const totalExpenses = evolution.reduce((s, m) => s + m.expenses, 0);
@@ -47,6 +65,8 @@ export default function Reports() {
         <p className="text-muted-foreground">Analisa o teu desempenho financeiro ao longo do tempo.</p>
       </div>
 
+      <AccountTabs accounts={accounts ?? []} value={selectedAccountTab} onChange={setSelectedAccountTab} />
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: "Receita Total", value: totalIncome, color: "text-emerald-500" },
@@ -57,7 +77,7 @@ export default function Reports() {
             <CardContent className="p-5">
               <p className="text-sm font-medium text-muted-foreground">{label}</p>
               {isLoading ? <Skeleton className="h-8 w-24 mt-2" /> : (
-                <h3 className={`text-2xl font-bold mt-2 ${color}`}>€{Math.abs(value).toFixed(2)}</h3>
+                <h3 className={`text-2xl font-bold mt-2 ${color}`}>{formatCurrency(Math.abs(value), currency)}</h3>
               )}
             </CardContent>
           </Card>
@@ -73,8 +93,8 @@ export default function Reports() {
                 <BarChart data={evolution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => `€${v}`} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`€${v.toFixed(2)}`, undefined]} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => formatCurrency(v, currency)} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [formatCurrency(v, currency), undefined]} />
                   <Legend />
                   <Bar dataKey="income" name="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="expenses" name="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
@@ -101,8 +121,8 @@ export default function Reports() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => `€${v}`} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [`€${v.toFixed(2)}`, undefined]} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => formatCurrency(v, currency)} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [formatCurrency(v, currency), undefined]} />
                     <Area type="monotone" dataKey="balance" name="Saldo" stroke="#7B2FF7" strokeWidth={2} fill="url(#balanceGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -125,17 +145,17 @@ export default function Reports() {
                         <Cell key={i} fill={entry.color || `hsl(var(--chart-${(i % 5) + 1}))`} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => [`€${v.toFixed(2)}`, undefined]} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} />
+                    <Tooltip formatter={(v: number) => [formatCurrency(v, currency), undefined]} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1.5 mt-2 max-h-[60px] overflow-y-auto">
                   {expensesByCategory.slice(0, 4).map((e, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
+                    <div key={i} className="flex items-center justify-between text-xs min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color || "hsl(var(--primary))" }} />
-                        <span>{e.name}</span>
+                        <span className="truncate">{e.name}</span>
                       </div>
-                      <span className="font-medium">€{e.amount.toFixed(2)}</span>
+                      <span className="font-medium shrink-0">{formatCurrency(e.amount, currency)}</span>
                     </div>
                   ))}
                 </div>

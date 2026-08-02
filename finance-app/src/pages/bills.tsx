@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { capitalizeFirst } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBills, payBill, createBill, updateBill, deleteBill } from "@/services/bills";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getAccounts } from "@/services/accounts";
 import { getCategories } from "@/services/categories";
 import { Plus, CheckCircle2, AlertCircle, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
@@ -32,6 +34,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInCalendarDays } from "date-fns";
+import { formatCurrency } from "@/lib/currency";
+import { useUserPreferences } from "@/contexts/user-preferences";
 
 const RECURRENCE_LABELS: Record<string, string> = {
   once: "Uma vez",
@@ -40,13 +44,22 @@ const RECURRENCE_LABELS: Record<string, string> = {
   yearly: "Anual",
 };
 
+function todayStr() {
+  return format(new Date(), "yyyy-MM-dd");
+}
+
+function emptyForm() {
+  return { name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly", start_date: todayStr(), end_date: "" };
+}
+
 export default function Bills() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { currency } = useUserPreferences();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
+  const [form, setForm] = useState(emptyForm);
 
   const { data: bills, isLoading } = useQuery({ queryKey: ["bills"], queryFn: getBills });
   const { data: accounts } = useQuery({ queryKey: ["accounts"], queryFn: getAccounts });
@@ -68,7 +81,7 @@ export default function Bills() {
 
   function openCreate() {
     setEditingId(null);
-    setForm({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
+    setForm(emptyForm());
     setModalOpen(true);
   }
 
@@ -81,19 +94,29 @@ export default function Bills() {
       category_id: bill.category_id ?? "",
       account_id: bill.account_id ?? "",
       recurrence: bill.recurrence ?? "monthly",
+      start_date: bill.start_date ?? bill.due_date ?? "",
+      end_date: bill.end_date ?? "",
     });
     setModalOpen(true);
   }
 
+  const isRecurring = form.recurrence !== "once";
+  const effectiveStartDate = form.start_date || form.due_date || null;
+  const dateRangeError = isRecurring && form.end_date && effectiveStartDate && form.end_date < effectiveStartDate
+    ? "A data de fim não pode ser anterior à data de início."
+    : null;
+
   const saveMutation = useMutation({
     mutationFn: () => {
       const payload = {
-        name: form.name,
+        name: capitalizeFirst(form.name),
         amount: Number(form.amount) || 0,
         due_date: form.due_date,
         category_id: form.category_id || null,
         account_id: form.account_id || null,
         recurrence: form.recurrence,
+        start_date: isRecurring ? (form.start_date || form.due_date || null) : null,
+        end_date: isRecurring ? (form.end_date || null) : null,
       };
       if (editingId) return updateBill(editingId, payload);
       return createBill({ ...payload, status: "pending" });
@@ -102,7 +125,7 @@ export default function Bills() {
       queryClient.invalidateQueries({ queryKey: ["bills"] });
       setModalOpen(false);
       setEditingId(null);
-      setForm({ name: "", amount: "", due_date: "", category_id: "", account_id: "", recurrence: "monthly" });
+      setForm(emptyForm());
     },
     onError: (err) => {
       toast({ title: "Não foi possível guardar a conta a pagar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
@@ -203,8 +226,32 @@ export default function Bills() {
                   </SelectContent>
                 </Select>
               </div>
+              {isRecurring && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bill-start">Começa em</Label>
+                    <Input
+                      id="bill-start"
+                      type="date"
+                      required
+                      value={form.start_date}
+                      onChange={(e) => setForm(f => ({ ...f, start_date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bill-end">Termina em (opcional)</Label>
+                    <Input
+                      id="bill-end"
+                      type="date"
+                      value={form.end_date}
+                      onChange={(e) => setForm(f => ({ ...f, end_date: e.target.value }))}
+                    />
+                    {dateRangeError && <p className="text-xs text-destructive">{dateRangeError}</p>}
+                  </div>
+                </div>
+              )}
               <DialogFooter>
-                <Button type="submit" disabled={saveMutation.isPending}>
+                <Button type="submit" disabled={saveMutation.isPending || !!dateRangeError}>
                   {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {editingId ? "Guardar Alterações" : "Criar conta a pagar"}
                 </Button>
@@ -218,19 +265,19 @@ export default function Bills() {
         <Card className="bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400">
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5" /><p className="font-medium">Em atraso</p></div>
-            <h3 className="text-2xl font-bold">€{overdueTotal.toFixed(2)}</h3>
+            <h3 className="text-2xl font-bold">{formatCurrency(overdueTotal, currency)}</h3>
           </CardContent>
         </Card>
         <Card className="bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400">
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-2"><Clock className="w-5 h-5" /><p className="font-medium">Por vencer</p></div>
-            <h3 className="text-2xl font-bold">€{upcomingTotal.toFixed(2)}</h3>
+            <h3 className="text-2xl font-bold">{formatCurrency(upcomingTotal, currency)}</h3>
           </CardContent>
         </Card>
         <Card className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-2"><CheckCircle2 className="w-5 h-5" /><p className="font-medium">Pagas este mês</p></div>
-            <h3 className="text-2xl font-bold">€{paidTotal.toFixed(2)}</h3>
+            <h3 className="text-2xl font-bold">{formatCurrency(paidTotal, currency)}</h3>
           </CardContent>
         </Card>
       </div>
@@ -246,7 +293,10 @@ export default function Bills() {
                 </div>
               ))
             ) : enriched.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">Nenhuma conta a pagar encontrada. Cria uma para começar.</div>
+              <div className="flex flex-col items-center p-10 text-center text-muted-foreground">
+                <EmptyStateIllustration />
+                Nenhuma conta a pagar encontrada. Cria uma para começar.
+              </div>
             ) : (
               enriched.map((bill) => (
                 <div key={bill.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => openEdit(bill)}>
@@ -265,11 +315,18 @@ export default function Bills() {
                         ) : (
                           <Badge variant="outline" className="text-[10px] h-4 px-1 bg-amber-500/10 text-amber-500 border-amber-500/20">Em {bill.daysUntilDue} dias</Badge>
                         )}
+                        {bill.recurrence && bill.recurrence !== "once" && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {RECURRENCE_LABELS[bill.recurrence] ?? bill.recurrence}
+                            {bill.start_date && ` · desde ${format(new Date(bill.start_date), "dd MMM yyyy")}`}
+                            {bill.end_date ? ` até ${format(new Date(bill.end_date), "dd MMM yyyy")}` : " · sem data de fim"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <div className="text-right"><div className="font-semibold">€{Number(bill.amount).toFixed(2)}</div></div>
+                    <div className="text-right"><div className="font-semibold">{formatCurrency(Number(bill.amount), currency)}</div></div>
                     {bill.status !== "paid" && (
                       <Button
                         size="sm"

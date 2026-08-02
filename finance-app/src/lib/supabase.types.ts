@@ -160,6 +160,8 @@ export interface Database {
           due_date: string;
           status: string;
           recurrence: string;
+          start_date: string | null;
+          end_date: string | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["bills"]["Row"], "id" | "created_at"> & { id?: string; created_at?: string };

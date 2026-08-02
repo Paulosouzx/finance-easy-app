@@ -20,24 +20,46 @@ export function PigLoader({ className = "w-24 h-24" }: { className?: string }) {
           <path d={EYE_PATH} />
           <path d={TAIL_PATH} />
         </g>
+        {/*
+          Duas trilhas de animação independentes (corpo e rabinho), cada uma com o seu
+          próprio pathLength normalizado. Combinar os dois traços num único "d" fazia o
+          traço "saltar" no ponto de descontinuidade entre eles (o rabinho é um subtraço
+          separado do corpo) — por isso cada um percorre o seu próprio contorno em loop.
+        */}
         <path
-          className="pig-loader-chase"
+          className="pig-loader-chase pig-loader-chase-body"
           stroke="hsl(var(--primary))"
           pathLength={100}
-          d={`${BODY_PATH} ${TAIL_PATH}`}
+          d={BODY_PATH}
+        />
+        <path
+          className="pig-loader-chase pig-loader-chase-tail"
+          stroke="hsl(var(--primary))"
+          pathLength={100}
+          d={TAIL_PATH}
         />
       </svg>
       <style>{`
         .pig-loader-chase {
-          stroke-dasharray: 18 100;
-          animation: pig-loader-chase 2.6s linear infinite;
+          stroke-dasharray: 22 100;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        .pig-loader-chase-body {
+          animation-name: pig-loader-chase;
+          animation-duration: 2.6s;
+        }
+        .pig-loader-chase-tail {
+          animation-name: pig-loader-chase;
+          animation-duration: 1.1s;
         }
         @keyframes pig-loader-chase {
           from { stroke-dashoffset: 0; }
-          to { stroke-dashoffset: -118; }
+          to { stroke-dashoffset: -122; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .pig-loader-chase { animation-duration: 8s; }
+          .pig-loader-chase-body { animation-duration: 8s; }
+          .pig-loader-chase-tail { animation-duration: 3.5s; }
         }
       `}</style>
     </div>

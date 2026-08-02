@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/auth";
 import { getProfile } from "@/services/profile";
 import { useTranslation } from "@/lib/i18n";
 import { THEME_OPTIONS, type ThemeOption } from "@/lib/theme-options";
+import { CURRENCY_OPTIONS } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -86,7 +87,7 @@ function ThemeSwatch({ option, selected, onSelect }: { option: ThemeOption; sele
 }
 
 export default function Settings() {
-  const { theme, setTheme, language, setLanguage, isModuleEnabled, toggleModule } = useUserPreferences();
+  const { theme, setTheme, language, setLanguage, currency, setCurrency, isModuleEnabled, toggleModule } = useUserPreferences();
   const { user, signOut } = useAuth();
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
   const t = useTranslation();
@@ -249,12 +250,26 @@ export default function Settings() {
           <CardDescription>{t("settings.regional.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="space-y-0.5">
               <Label className="text-base">{t("settings.regional.currency")}</Label>
               <p className="text-sm text-muted-foreground">{t("settings.regional.currencyDesc")}</p>
             </div>
-            <div className="font-semibold px-3 py-1 bg-secondary rounded-lg">EUR (€)</div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {CURRENCY_OPTIONS.map((option) => (
+                <button
+                  key={option.code}
+                  type="button"
+                  onClick={() => setCurrency(option.code)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all",
+                    currency === option.code ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"
+                  )}
+                >
+                  {option.symbol} {option.code}
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

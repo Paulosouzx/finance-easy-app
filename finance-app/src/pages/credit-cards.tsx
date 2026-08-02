@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCreditCards, createCreditCard, updateCreditCard, deleteCreditCard } from "@/services/creditCards";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getAccounts } from "@/services/accounts";
 import { getTransactions } from "@/services/transactions";
 import { Plus, CreditCard as CardIcon, Pencil, Trash2, Loader2 } from "lucide-react";
@@ -183,7 +184,10 @@ export default function CreditCards() {
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)
         ) : enriched.length === 0 ? (
-          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">Nenhum cartão encontrado. Cria um para começar.</div>
+          <div className="col-span-full flex flex-col items-center p-10 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+            <EmptyStateIllustration />
+            Nenhum cartão encontrado. Cria um para começar.
+          </div>
         ) : (
           enriched.map(card => {
             const limit = Number(card.credit_limit ?? 0);

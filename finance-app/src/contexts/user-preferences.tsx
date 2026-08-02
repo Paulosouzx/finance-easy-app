@@ -44,6 +44,8 @@ type UserPreferencesContextType = {
   setTheme: (theme: AppTheme) => void;
   language: AppLanguage;
   setLanguage: (language: AppLanguage) => void;
+  currency: string;
+  setCurrency: (currency: string) => void;
   enabledModules: string[];
   toggleModule: (key: string) => void;
   isModuleEnabled: (key: string) => boolean;
@@ -62,6 +64,10 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem("finance-language") as AppLanguage) ?? "pt";
   });
 
+  const [currency, setCurrencyLocal] = useState<string>(() => {
+    return localStorage.getItem("finance-currency") ?? "EUR";
+  });
+
   const [enabledModules, setModulesLocal] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem("finance-modules");
@@ -73,6 +79,18 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { applyThemeToDOM(theme); }, [theme]);
 
+  // Mantém as preferências em sincronia entre separadores abertos: quando outro
+  // separador altera localStorage (ex: muda a moeda em /settings), refletimos aqui.
+  useEffect(() => {
+    function handleStorage(e: StorageEvent) {
+      if (e.key === "finance-currency" && e.newValue) setCurrencyLocal(e.newValue);
+      if (e.key === "finance-theme" && e.newValue) { setThemeLocal(e.newValue as AppTheme); applyThemeToDOM(e.newValue as AppTheme); }
+      if (e.key === "finance-language" && e.newValue) setLanguageLocal(e.newValue as AppLanguage);
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
 
   useEffect(() => {
@@ -80,9 +98,11 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     setThemeLocal(profile.theme);
     setLanguageLocal(profile.language);
     setModulesLocal(profile.enabled_modules);
+    if (profile.currency) setCurrencyLocal(profile.currency);
     localStorage.setItem("finance-theme", profile.theme);
     localStorage.setItem("finance-language", profile.language);
     localStorage.setItem("finance-modules", JSON.stringify(profile.enabled_modules));
+    if (profile.currency) localStorage.setItem("finance-currency", profile.currency);
     applyThemeToDOM(profile.theme);
   }, [profile]);
 
@@ -90,13 +110,25 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
     setThemeLocal(newTheme);
     localStorage.setItem("finance-theme", newTheme);
     applyThemeToDOM(newTheme);
-    updateProfile({ theme: newTheme }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
+    updateProfile({ theme: newTheme })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }))
+      .catch((err) => console.error("Não foi possível guardar o tema", err));
   };
 
   const setLanguage = (newLanguage: AppLanguage) => {
     setLanguageLocal(newLanguage);
     localStorage.setItem("finance-language", newLanguage);
-    updateProfile({ language: newLanguage }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
+    updateProfile({ language: newLanguage })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }))
+      .catch((err) => console.error("Não foi possível guardar o idioma", err));
+  };
+
+  const setCurrency = (newCurrency: string) => {
+    setCurrencyLocal(newCurrency);
+    localStorage.setItem("finance-currency", newCurrency);
+    updateProfile({ currency: newCurrency })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }))
+      .catch((err) => console.error("Não foi possível guardar a moeda", err));
   };
 
   const toggleModule = (key: string) => {
@@ -105,13 +137,15 @@ export function UserPreferencesProvider({ children }: { children: ReactNode }) {
       : [...enabledModules, key];
     setModulesLocal(next);
     localStorage.setItem("finance-modules", JSON.stringify(next));
-    updateProfile({ enabled_modules: next }).then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }));
+    updateProfile({ enabled_modules: next })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["profile"] }))
+      .catch((err) => console.error("Não foi possível guardar os módulos", err));
   };
 
   const isModuleEnabled = (key: string) => enabledModules.includes(key);
 
   return (
-    <UserPreferencesContext.Provider value={{ theme, setTheme, language, setLanguage, enabledModules, toggleModule, isModuleEnabled }}>
+    <UserPreferencesContext.Provider value={{ theme, setTheme, language, setLanguage, currency, setCurrency, enabledModules, toggleModule, isModuleEnabled }}>
       {children}
     </UserPreferencesContext.Provider>
   );

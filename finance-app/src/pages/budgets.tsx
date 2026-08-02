@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBudgets, createBudget, updateBudget, deleteBudget } from "@/services/budgets";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getTransactions } from "@/services/transactions";
 import { getCategories } from "@/services/categories";
 import { Plus, PieChart as PieChartIcon, AlertCircle, Loader2, Pencil, Trash2, BarChart3, CircleDot } from "lucide-react";
@@ -274,7 +275,10 @@ export default function Budgets() {
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
         ) : enriched.length === 0 ? (
-          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">Nenhum orçamento definido para este mês.</div>
+          <div className="col-span-full flex flex-col items-center p-10 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+            <EmptyStateIllustration />
+            Nenhum orçamento definido para este mês.
+          </div>
         ) : (
           enriched.map(budget => {
             const cat = (budget as any).categories;

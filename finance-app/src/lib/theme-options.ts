@@ -28,7 +28,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: "Cinza-azulado, não preto puro",
     bg: "#171726",
     card: "#222338",
-    primary: "#9B5FFA",
+    primary: "#7B2FF7",
     text: "#E8EAF2",
     subtext: "#8A8FAE",
   },

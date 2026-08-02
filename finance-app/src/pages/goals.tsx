@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getGoals, createGoal, updateGoal, deleteGoal } from "@/services/goals";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { Plus, Target, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -166,7 +167,10 @@ export default function Goals() {
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-xl" />)
         ) : enriched.length === 0 ? (
-          <div className="col-span-full p-6 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">Nenhuma meta de poupança encontrada.</div>
+          <div className="col-span-full flex flex-col items-center p-10 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
+            <EmptyStateIllustration />
+            Nenhuma meta de poupança encontrada.
+          </div>
         ) : (
           enriched.map(goal => (
             <Card key={goal.id} className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => openEdit(goal)}>

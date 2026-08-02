@@ -20,6 +20,7 @@ import {
   Users,
   Menu,
   PiggyBank,
+  Plus,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -109,10 +110,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   })();
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="h-dvh flex w-full bg-background overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-60 border-r bg-sidebar hidden md:flex flex-col">
-        <div className="h-14 flex items-center px-5 border-b border-sidebar-border">
+      <aside className="w-60 border-r bg-sidebar hidden md:flex flex-col shrink-0">
+        <div className="h-14 flex items-center px-5 border-b border-sidebar-border shrink-0">
           <Link href="/" className="flex items-center gap-2 text-primary font-bold text-base tracking-tight">
             <span className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center shrink-0">
               <PiggyBank className="w-4 h-4" strokeWidth={1.5} />
@@ -121,20 +122,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+        <div className="px-3 pt-3 shrink-0">
+          <Link href="/transactions?new=1">
+            <div className="flex items-center justify-center gap-2 w-full h-11 rounded-lg bg-primary text-primary-foreground text-sm font-semibold cursor-pointer hover:bg-primary/90 transition-colors">
+              <Plus className="w-4 h-4" />
+              Nova Transação
+            </div>
+          </Link>
+        </div>
+
+        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}>
                 <div
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                  className={`flex items-center gap-3 px-3.5 py-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                     isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   }`}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
+                  <Icon className="w-5 h-5 shrink-0" />
                   {t(item.labelKey)}
                 </div>
               </Link>
@@ -142,14 +152,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border shrink-0">
           <Link href="/settings">
-            <div className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+            <div className={`flex items-center gap-3 px-3.5 py-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
               location.startsWith("/settings")
                 ? "bg-primary text-primary-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             }`}>
-              <Settings className="w-4 h-4 shrink-0" />
+              <Settings className="w-5 h-5 shrink-0" />
               {t("nav.settings")}
             </div>
           </Link>
@@ -157,7 +167,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <header className="h-14 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-4 md:px-6 sticky top-0 z-10">
           <div className="flex items-center gap-4 min-w-0">
             <Link href="/" className="flex items-center gap-2 text-primary font-bold md:hidden shrink-0">

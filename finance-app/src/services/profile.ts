@@ -33,6 +33,7 @@ export async function getProfile(): Promise<Profile | null> {
 
 export async function updateProfile(input: Partial<Pick<Profile, "theme" | "language" | "enabled_modules" | "name" | "currency">>): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase.from("profiles").update(input).eq("id", user.id);
+  if (!user) throw new Error("Não autenticado");
+  const { error } = await supabase.from("profiles").update(input).eq("id", user.id);
+  if (error) throw error;
 }
