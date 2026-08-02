@@ -112,7 +112,7 @@ export default function Reports() {
             {isLoading ? <Skeleton className="h-[250px] w-full" /> : (
               <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={evolution} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <AreaChart data={evolution} margin={{ top: 10, right: 10, left: 4, bottom: 0 }}>
                     <defs>
                       <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#7B2FF7" stopOpacity={0.3} />
@@ -121,7 +121,7 @@ export default function Reports() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => formatCurrency(v, currency)} />
+                    <YAxis axisLine={false} tickLine={false} width={80} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={v => formatCurrency(v, currency)} />
                     <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }} formatter={(v: number) => [formatCurrency(v, currency), undefined]} />
                     <Area type="monotone" dataKey="balance" name="Saldo" stroke="#7B2FF7" strokeWidth={2} fill="url(#balanceGrad)" />
                   </AreaChart>

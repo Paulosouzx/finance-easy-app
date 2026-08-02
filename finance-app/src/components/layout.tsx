@@ -45,6 +45,7 @@ import { useUserPreferences } from "@/contexts/user-preferences";
 import { useAuth } from "@/contexts/auth";
 import { getProfile } from "@/services/profile";
 import { getPendingInvites, respondToInvite, type PendingInvite } from "@/services/accounts";
+import { ensurePushSubscription } from "@/services/push";
 import { useTranslation, type TranslationKey } from "@/lib/i18n";
 
 type NavItem = {
@@ -97,6 +98,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setSelectedInvite(null);
+      // Ao aceitar a partilha, ativa notificações push para avisar quando o outro
+      // utilizador mexer na conta partilhada. Falha em silêncio (ex: permissão
+      // negada) — a aceitação do convite não deve ficar bloqueada por isto.
+      if (accept) ensurePushSubscription().catch(() => {});
     } finally {
       setResponding(false);
     }

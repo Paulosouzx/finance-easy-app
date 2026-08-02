@@ -4,7 +4,7 @@ import { getBudgets, createBudget, updateBudget, deleteBudget } from "@/services
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getTransactions } from "@/services/transactions";
 import { getCategories } from "@/services/categories";
-import { Plus, PieChart as PieChartIcon, AlertCircle, Loader2, Pencil, Trash2, BarChart3, CircleDot } from "lucide-react";
+import { Plus, PieChart as PieChartIcon, AlertCircle, Loader2, Pencil, Trash2, BarChart3, LineChart as LineChartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,8 +15,8 @@ import {
   BarChart,
   Bar,
   Cell,
-  PieChart,
-  Pie,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -47,11 +47,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
-type BudgetChartType = "bar" | "donut";
+type BudgetChartType = "bar" | "line";
 
 const CHART_TYPE_OPTIONS: { value: BudgetChartType; label: string; icon: typeof BarChart3 }[] = [
   { value: "bar", label: "Barras", icon: BarChart3 },
-  { value: "donut", label: "Rosca", icon: CircleDot },
+  { value: "line", label: "Linha", icon: LineChartIcon },
 ];
 
 const STATUS_COLOR = { exceeded: "#f43f5e", warning: "#f59e0b", ok: "#10b981" } as const;
@@ -237,33 +237,29 @@ export default function Budgets() {
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 {chartType === "bar" ? (
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} interval={0} angle={chartData.length > 4 ? -20 : 0} textAnchor={chartData.length > 4 ? "end" : "middle"} height={chartData.length > 4 ? 50 : 30} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(value) => `€${value}`} />
                     <Tooltip content={<BudgetBarTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="gasto" name="Gasto" radius={[4, 4, 0, 0]}>
+                    <Bar dataKey="gasto" name="Gasto" radius={[3, 3, 0, 0]} maxBarSize={18}>
                       {chartData.map((entry, index) => (
                         <Cell key={`gasto-${index}`} fill={STATUS_COLOR[entry.status]} />
                       ))}
                     </Bar>
-                    <Bar dataKey="limite" name="Limite" fill="hsl(var(--muted-foreground))" fillOpacity={0.25} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="limite" name="Limite" fill="transparent" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="3 2" radius={[3, 3, 0, 0]} maxBarSize={18} />
                   </BarChart>
                 ) : (
-                  <PieChart>
-                    <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="gasto" nameKey="name" stroke="none">
-                      {chartData.map((entry, index) => (
-                        <Cell key={`donut-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                      formatter={(value: number) => [`€${value.toFixed(2)}`, undefined]}
-                    />
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} interval={0} angle={chartData.length > 4 ? -20 : 0} textAnchor={chartData.length > 4 ? "end" : "middle"} height={chartData.length > 4 ? 50 : 30} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(value) => `€${value}`} />
+                    <Tooltip content={<BudgetBarTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                  </PieChart>
+                    <Line type="monotone" dataKey="gasto" name="Gasto" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="limite" name="Limite" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} />
+                  </LineChart>
                 )}
               </ResponsiveContainer>
             </div>

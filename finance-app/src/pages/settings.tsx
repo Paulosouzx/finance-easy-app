@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUserPreferences, type AppLanguage } from "@/contexts/user-preferences";
 import { useAuth } from "@/contexts/auth";
@@ -5,15 +6,17 @@ import { getProfile } from "@/services/profile";
 import { useTranslation } from "@/lib/i18n";
 import { THEME_OPTIONS, type ThemeOption } from "@/lib/theme-options";
 import { CURRENCY_OPTIONS } from "@/lib/currency";
+import { isPushSupported, ensurePushSubscription } from "@/services/push";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Check, LogOut, Languages, Download, CheckCircle2, Share } from "lucide-react";
+import { Check, LogOut, Languages, Download, CheckCircle2, Share, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePwaInstall } from "@/contexts/pwa-install";
+import { useToast } from "@/hooks/use-toast";
 
 type ModuleOption = {
   key: string;
@@ -92,9 +95,27 @@ export default function Settings() {
   const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: getProfile });
   const t = useTranslation();
   const { isStandalone, isIos, canInstall, promptInstall } = usePwaInstall();
+  const { toast } = useToast();
+  const [enablingPush, setEnablingPush] = useState(false);
 
   const displayName = profile?.name || user?.email?.split("@")[0] || "Utilizador";
   const initial = displayName.charAt(0).toUpperCase();
+
+  async function handleEnablePush() {
+    setEnablingPush(true);
+    try {
+      const ok = await ensurePushSubscription();
+      if (ok) {
+        toast({ title: "Notificações ativadas", description: "Vais receber um aviso sempre que alguém mexer numa conta partilhada contigo." });
+      } else {
+        toast({ title: "Não foi possível ativar", description: "Permissão de notificações negada ou não suportada neste navegador.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Não foi possível ativar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    } finally {
+      setEnablingPush(false);
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto w-full pb-12">
@@ -270,6 +291,32 @@ export default function Settings() {
                 </button>
               ))}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notificações push */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notificações</CardTitle>
+          <CardDescription>Recebe um aviso, mesmo com a app fechada, quando alguém mexer numa conta partilhada contigo.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-base">Notificações de conta partilhada</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isPushSupported() ? "Ativa (ou reativa) as notificações neste dispositivo." : "Este navegador não suporta notificações push."}
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleEnablePush} disabled={enablingPush || !isPushSupported()} variant="outline">
+              {enablingPush ? "A ativar…" : "Ativar notificações"}
+            </Button>
           </div>
         </CardContent>
       </Card>

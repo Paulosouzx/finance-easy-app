@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount, updateAccount, deleteAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import { ensurePushSubscription } from "@/services/push";
 import { getTransactions } from "@/services/transactions";
 import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2, TrendingUp } from "lucide-react";
 import { formatCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
@@ -380,6 +381,8 @@ function ShareAccountDialog({ accountId, accountName }: { accountId: string; acc
       setDebouncedQuery("");
       queryClient.invalidateQueries({ queryKey: ["account-members", accountId] });
       toast({ title: "Convite enviado", description: `${target.email} foi convidado a gerir esta conta.` });
+      // O dono também quer ser avisado quando o convidado mexer na conta partilhada.
+      ensurePushSubscription().catch(() => {});
     },
     onError: (err) => {
       toast({ title: "Não foi possível convidar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
