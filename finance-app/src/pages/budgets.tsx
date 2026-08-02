@@ -4,26 +4,14 @@ import { getBudgets, createBudget, updateBudget, deleteBudget } from "@/services
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { getTransactions } from "@/services/transactions";
 import { getCategories } from "@/services/categories";
-import { Plus, PieChart as PieChartIcon, AlertCircle, Loader2, Pencil, Trash2, BarChart3, LineChart as LineChartIcon } from "lucide-react";
+import { Plus, PieChart as PieChartIcon, AlertCircle, Loader2, Pencil, Trash2, Wallet, TrendingDown } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
+import { useUserPreferences } from "@/contexts/user-preferences";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -47,41 +35,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
-type BudgetChartType = "bar" | "line";
-
-const CHART_TYPE_OPTIONS: { value: BudgetChartType; label: string; icon: typeof BarChart3 }[] = [
-  { value: "bar", label: "Barras", icon: BarChart3 },
-  { value: "line", label: "Linha", icon: LineChartIcon },
-];
-
-const STATUS_COLOR = { exceeded: "#f43f5e", warning: "#f59e0b", ok: "#10b981" } as const;
-
-function BudgetBarTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border bg-card px-3 py-2 shadow-md">
-      <p className="text-sm font-medium mb-1">{label}</p>
-      {payload.map((entry: any) => {
-        const color = entry.dataKey === "gasto" ? STATUS_COLOR[entry.payload.status as keyof typeof STATUS_COLOR] : "hsl(var(--muted-foreground))";
-        return (
-          <p key={entry.dataKey} className="text-sm" style={{ color }}>
-            {entry.name}: €{Number(entry.value).toFixed(2)}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function Budgets() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { currency } = useUserPreferences();
   const currentMonth = format(new Date(), "yyyy-MM");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ category_id: "", limit_amount: "" });
-  const [chartType, setChartType] = useState<BudgetChartType>("bar");
 
   const { data: budgets, isLoading } = useQuery({ queryKey: ["budgets", currentMonth], queryFn: () => getBudgets(currentMonth) });
   const { data: transactions } = useQuery({ queryKey: ["transactions", currentMonth], queryFn: () => getTransactions({ month: currentMonth, type: "expense" }) });
@@ -101,18 +63,9 @@ export default function Budgets() {
     });
   }, [budgets, transactions]);
 
-  const chartData = useMemo(() => {
-    return enriched.map(b => {
-      const cat = (b as any).categories;
-      return {
-        name: cat?.name || "Sem categoria",
-        gasto: b.spentAmount,
-        limite: Number(b.limit_amount),
-        color: cat?.color || "hsl(var(--primary))",
-        status: b.status as keyof typeof STATUS_COLOR,
-      };
-    });
-  }, [enriched]);
+  const totalLimit = enriched.reduce((sum, b) => sum + Number(b.limit_amount), 0);
+  const totalSpent = enriched.reduce((sum, b) => sum + b.spentAmount, 0);
+  const exceededCount = enriched.filter(b => b.status === "exceeded").length;
 
   function openCreate() {
     setEditingId(null);
@@ -211,60 +164,26 @@ export default function Budgets() {
       </div>
 
       {!isLoading && enriched.length > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-            <CardTitle>Gasto vs. Limite</CardTitle>
-            <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
-              {CHART_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  title={label}
-                  onClick={() => setChartType(value)}
-                  className={cn(
-                    "h-7 w-7 text-muted-foreground hover:text-foreground",
-                    chartType === value && "bg-background text-foreground shadow-sm"
-                  )}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                </Button>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {chartType === "bar" ? (
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barGap={4} barCategoryGap="30%">
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} interval={0} angle={chartData.length > 4 ? -20 : 0} textAnchor={chartData.length > 4 ? "end" : "middle"} height={chartData.length > 4 ? 50 : 30} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(value) => `€${value}`} />
-                    <Tooltip content={<BudgetBarTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="gasto" name="Gasto" radius={[3, 3, 0, 0]} maxBarSize={18}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`gasto-${index}`} fill={STATUS_COLOR[entry.status]} />
-                      ))}
-                    </Bar>
-                    <Bar dataKey="limite" name="Limite" fill="transparent" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} strokeDasharray="3 2" radius={[3, 3, 0, 0]} maxBarSize={18} />
-                  </BarChart>
-                ) : (
-                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} interval={0} angle={chartData.length > 4 ? -20 : 0} textAnchor={chartData.length > 4 ? "end" : "middle"} height={chartData.length > 4 ? 50 : 30} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(value) => `€${value}`} />
-                    <Tooltip content={<BudgetBarTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line type="monotone" dataKey="gasto" name="Gasto" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="limite" name="Limite" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} />
-                  </LineChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2 text-muted-foreground"><Wallet className="w-5 h-5" /><p className="font-medium">Total Orçado</p></div>
+              <h3 className="text-2xl font-bold">{formatCurrency(totalLimit, currency)}</h3>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2 text-muted-foreground"><TrendingDown className="w-5 h-5" /><p className="font-medium">Total Gasto</p></div>
+              <h3 className="text-2xl font-bold">{formatCurrency(totalSpent, currency)}</h3>
+            </CardContent>
+          </Card>
+          <Card className={exceededCount > 0 ? "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400" : ""}>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-2"><AlertCircle className="w-5 h-5" /><p className="font-medium">Acima do Limite</p></div>
+              <h3 className="text-2xl font-bold">{exceededCount}</h3>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -290,7 +209,7 @@ export default function Budgets() {
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-semibold truncate">{cat?.name || "Categoria sem nome"}</h4>
-                        <p className="text-xs text-muted-foreground">Limite: €{Number(budget.limit_amount).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Limite: {formatCurrency(Number(budget.limit_amount), currency)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -305,7 +224,7 @@ export default function Budgets() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Gasto: €{budget.spentAmount.toFixed(2)}</span>
+                      <span className="text-muted-foreground">Gasto: {formatCurrency(budget.spentAmount, currency)}</span>
                       <span className="font-medium">{budget.percentage.toFixed(1)}%</span>
                     </div>
                     <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
