@@ -78,6 +78,14 @@ export async function getAccountMembers(accountId: string): Promise<AccountMembe
   return data ?? [];
 }
 
+export type AccountMemberProfile = Database["public"]["Functions"]["get_account_member_profiles"]["Returns"][number];
+
+export async function getAccountMemberProfiles(accountId: string): Promise<AccountMemberProfile[]> {
+  const { data, error } = await supabase.rpc("get_account_member_profiles", { p_account_id: accountId });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function removeAccountMember(memberId: string): Promise<void> {
   const { error } = await supabase.from("account_members").delete().eq("id", memberId);
   if (error) throw error;

@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccounts, createAccount, updateAccount, deleteAccount, getAccountMembers, inviteAccountMember, removeAccountMember, searchUsers, type ProfileSearchResult } from "@/services/accounts";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import { AccountMemberAvatars } from "@/components/account-member-avatars";
 import { ensurePushSubscription } from "@/services/push";
 import { getTransactions } from "@/services/transactions";
-import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, Users, X, Loader2, Search, UserPlus, Pencil, Trash2, TrendingUp } from "lucide-react";
+import { Plus, Landmark, CreditCard, Building2, Wallet, HandCoins, X, Loader2, Search, UserPlus, Pencil, Trash2, TrendingUp } from "lucide-react";
 import { formatCurrency, CURRENCY_OPTIONS } from "@/lib/currency";
 import { computeAccountBalance, computeTotalBalance } from "@/lib/account-balance";
 import { getAccountColor, ACCOUNT_COLOR_PALETTE } from "@/lib/account-colors";
@@ -304,15 +305,7 @@ export default function Accounts() {
                   <div className="flex items-end justify-between">
                     <h4 className="text-2xl font-bold">{formatCurrency(computeAccountBalance(account, transactions ?? []), displayCurrency)}</h4>
                     {isOwner && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-muted-foreground"
-                        onClick={() => setShareAccountId(account.id)}
-                      >
-                        <Users className="w-4 h-4 mr-1.5" />
-                        Partilhar
-                      </Button>
+                      <AccountMemberAvatars accountId={account.id} onAddClick={() => setShareAccountId(account.id)} />
                     )}
                   </div>
                 </CardContent>

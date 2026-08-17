@@ -264,6 +264,19 @@ export interface Database {
           inviter_avatar_url: string | null;
         }[];
       };
+      get_account_member_profiles: {
+        Args: { p_account_id: string };
+        Returns: {
+          member_id: string;
+          user_id: string | null;
+          role: string;
+          invited_email: string;
+          created_at: string;
+          name: string;
+          username: string;
+          avatar_url: string | null;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

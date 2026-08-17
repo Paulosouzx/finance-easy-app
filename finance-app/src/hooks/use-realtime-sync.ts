@@ -22,6 +22,7 @@ export function useRealtimeSync() {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "account_members" }, () => {
         queryClient.invalidateQueries({ queryKey: ["account-members"] });
+        queryClient.invalidateQueries({ queryKey: ["account-member-profiles"] });
         queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
         queryClient.invalidateQueries({ queryKey: ["accounts"] });
       })
